@@ -36,22 +36,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 useEffect(() => {
-  getRedirectResult(auth)
-    .then((result) => {
-      console.log("Redirect result:", result);
+  const init = async () => {
+    try {
+      const result = await getRedirectResult(auth);
       if (result?.user) {
         setUser(result.user);
+        setIsAuthLoading(false);
+        return; // ya tenemos usuario, no necesitamos esperar onAuthStateChanged
       }
-    })
-    .catch(console.error);
+    } catch (error) {
+      console.error("Redirect error:", error);
+    }
 
-  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-    console.log("Auth state changed:", firebaseUser?.email);
-    setUser(firebaseUser);
-    setIsAuthLoading(false);
-  });
+    // Si no hay redirect result, espera onAuthStateChanged
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setIsAuthLoading(false);
+    });
 
-  return () => unsubscribe();
+    return () => unsubscribe();
+  };
+
+  init();
 }, []);
  const loginWithGoogle = async () => {
   try {
