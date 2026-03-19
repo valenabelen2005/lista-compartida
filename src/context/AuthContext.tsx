@@ -6,8 +6,12 @@ import {
   type ReactNode,
 } from "react";
 import {
+  browserLocalPersistence,
+  getRedirectResult,
   onAuthStateChanged,
+  setPersistence,
   signInWithPopup,
+  signInWithRedirect,
 
   signOut,
   updateProfile,
@@ -44,9 +48,10 @@ useEffect(() => {
 }, []);
 const loginWithGoogle = async () => {
   try {
-    await signInWithPopup(auth, googleProvider);
-  } catch (error: any) {
-    console.error("Error login:", error.code, error.message);
+    const result = await signInWithPopup(auth, googleProvider);
+    setUser(result.user); // ← seteamos directo sin depender de onAuthStateChanged
+  } catch (error) {
+    console.error("Error login:", error);
   }
 };
   const logout = async () => {
