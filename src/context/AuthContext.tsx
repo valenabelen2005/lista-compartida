@@ -8,12 +8,9 @@ import {
 import {
   onAuthStateChanged,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
+
   signOut,
   updateProfile,
-  setPersistence,
-  browserLocalPersistence,
 
   type User,
 } from "firebase/auth";
@@ -39,43 +36,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 useEffect(() => {
-  const init = async () => {
-    try {
-      const result = await getRedirectResult(auth);
-      if (result?.user) {
-        setUser(result.user);
-        setIsAuthLoading(false);
-        return; // ya tenemos usuario, no necesitamos esperar onAuthStateChanged
-      }
-    } catch (error) {
-      console.error("Redirect error:", error);
-    }
-
-    // Si no hay redirect result, espera onAuthStateChanged
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setIsAuthLoading(false);
-    });
-
-    return () => unsubscribe();
-  };
-
-  init();
+  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    setUser(firebaseUser);
+    setIsAuthLoading(false);
+  });
+  return () => unsubscribe();
 }, []);
 const loginWithGoogle = async () => {
   try {
-    await setPersistence(auth, browserLocalPersistence);
-    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-    if (isMobile) {
-      await signInWithRedirect(auth, googleProvider);
-    } else {
-      await signInWithPopup(auth, googleProvider);
-    }
-  } catch (error) {
-    console.error("Error login:", error);
+    await signInWithPopup(auth, googleProvider);
+  } catch (error: any) {
+    console.error("Error login:", error.code, error.message);
   }
 };
-
   const logout = async () => {
     await signOut(auth);
   };
