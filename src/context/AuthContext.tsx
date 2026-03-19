@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 useEffect(() => {
   getRedirectResult(auth)
     .then((result) => {
+      console.log("Redirect result:", result);
       if (result?.user) {
         setUser(result.user);
       }
@@ -45,13 +46,13 @@ useEffect(() => {
     .catch(console.error);
 
   const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    console.log("Auth state changed:", firebaseUser?.email);
     setUser(firebaseUser);
     setIsAuthLoading(false);
   });
 
   return () => unsubscribe();
 }, []);
-
  const loginWithGoogle = async () => {
   try {
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
