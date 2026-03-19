@@ -12,6 +12,9 @@ import {
   getRedirectResult,
   signOut,
   updateProfile,
+  setPersistence,
+  browserLocalPersistence,
+
   type User,
 } from "firebase/auth";
 import { auth, googleProvider } from "../services/firebase";
@@ -59,8 +62,9 @@ useEffect(() => {
 
   init();
 }, []);
- const loginWithGoogle = async () => {
+const loginWithGoogle = async () => {
   try {
+    await setPersistence(auth, browserLocalPersistence);
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
     if (isMobile) {
       await signInWithRedirect(auth, googleProvider);
