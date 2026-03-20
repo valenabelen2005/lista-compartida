@@ -3,32 +3,23 @@ import { useParams } from "react-router-dom";
 import { useGroups } from "../context/GroupsContext";
 import type { GroupType, ShoppingItemType } from "../types";
 import AddItemForm from "../componentes/AddItemFor";
+import ItemCard from "../componentes/ItemCard";
 
 type FilterType = "all" | "pending" | "purchased";
 
 export default function GroupDetail() {
-const { id } = useParams();
-const { myGroups, isLoading, addItemToGroup, toggleItemPurchased, deleteItemFromGroup, updateItemQuantity, updateItemName  } = useGroups();
-const [filter, setFilter] = useState<FilterType>("all");
-const [editingId, setEditingId] = useState<string | null>(null);
-const [editingQuantity, setEditingQuantity] = useState("");
-const [editingNameId, setEditingNameId] = useState<string | null>(null);
-const [editingName, setEditingName] = useState("");
-const group = useMemo(() => {
-  return myGroups.find((group: GroupType) => group.id === id); 
-}, [myGroups, id]);
+  const { id } = useParams();
+  const { myGroups, isLoading, addItemToGroup, toggleItemPurchased, deleteItemFromGroup, updateItemQuantity, updateItemName } = useGroups();
+  const [filter, setFilter] = useState<FilterType>("all");
+
+  const group = useMemo(() => {
+    return myGroups.find((g: GroupType) => g.id === id);
+  }, [myGroups, id]);
 
   const filteredItems = useMemo(() => {
     if (!group) return [];
-
-    if (filter === "pending") {
-      return group.items.filter((item: ShoppingItemType) => !item.purchased);
-    }
-
-    if (filter === "purchased") {
-      return group.items.filter((item: ShoppingItemType) => item.purchased);
-    }
-
+    if (filter === "pending") return group.items.filter((item: ShoppingItemType) => !item.purchased);
+    if (filter === "purchased") return group.items.filter((item: ShoppingItemType) => item.purchased);
     return group.items;
   }, [group, filter]);
 
@@ -36,24 +27,13 @@ const group = useMemo(() => {
     if (!group) return 0;
     return group.items.filter((item) => !item.purchased).length;
   }, [group]);
-    if (isLoading) {
-    return (
-      <main className="min-h-screen bg-white p-6">
-        <div className="max-w-xl mx-auto">
-          <p className="text-gray-500">Cargando...</p>
-        </div>
-      </main>
-    );
+
+  if (isLoading) {
+    return <main className="min-h-screen bg-white p-6"><p className="text-gray-500">Cargando...</p></main>;
   }
 
   if (!group) {
-    return (
-      <main className="min-h-screen bg-white p-6">
-        <div className="max-w-xl mx-auto">
-          <h1 className="text-2xl font-bold">Grupo no encontrado</h1>
-        </div>
-      </main>
-    );
+    return <main className="min-h-screen bg-white p-6"><h1 className="text-2xl font-bold">Grupo no encontrado</h1></main>;
   }
 
   return (
@@ -61,156 +41,46 @@ const group = useMemo(() => {
       <div className="max-w-xl mx-auto">
         <h1 className="text-3xl font-bold">{group.name}</h1>
         <p className="text-sm text-gray-500 mt-1">
-       Código: <span className="font-semibold">{group.code ?? "Sin código"}</span>
+          Código: <span className="font-semibold">{group.code ?? "Sin código"}</span>
         </p>
         <p className="text-gray-500 mt-2">Lista de compras compartida</p>
         <p className="text-sm text-gray-600 mt-2">
           Pendientes: <span className="font-semibold">{pendingCount}</span>
         </p>
-<div className="mt-8">
-<AddItemForm
-  onAdd={(name, quantity) => addItemToGroup(group.id, name, quantity)}
-/>
-</div>
+
+        <div className="mt-8">
+          <AddItemForm onAdd={(name, quantity) => addItemToGroup(group.id, name, quantity)} />
+        </div>
+
         <div className="mt-8 flex gap-2 flex-wrap">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-4 py-2 rounded-xl text-sm ${
-              filter === "all" ? "bg-black text-white" : "bg-gray-100"
-            }`}
-          >
-            Todos
-          </button>
-          <button
-            onClick={() => setFilter("pending")}
-            className={`px-4 py-2 rounded-xl text-sm ${
-              filter === "pending" ? "bg-black text-white" : "bg-gray-100"
-            }`}
-          >
-            Pendientes
-          </button>
-          <button
-            onClick={() => setFilter("purchased")}
-            className={`px-4 py-2 rounded-xl text-sm ${
-              filter === "purchased" ? "bg-black text-white" : "bg-gray-100"
-            }`}
-          >
-            Comprados
-          </button>
+          {(["all", "pending", "purchased"] as FilterType[]).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-xl text-sm ${filter === f ? "bg-black text-white" : "bg-gray-100"}`}
+            >
+              {f === "all" ? "Todos" : f === "pending" ? "Pendientes" : "Comprados"}
+            </button>
+          ))}
         </div>
 
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-4">Productos</h2>
-
           {filteredItems.length === 0 ? (
             <p className="text-gray-500">No hay productos para este filtro.</p>
           ) : (
             <div className="flex flex-col gap-3">
               {filteredItems.map((item) => (
-                <div
+                <ItemCard
                   key={item.id}
-                  className="border border-gray-200 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4"
-                >
-<div className="flex-1 min-w-0 flex flex-col gap-1">
-  {editingNameId === item.id ? (
-    <div className="flex gap-2">
-      <input
-        type="text"
-        value={editingName}
-        onChange={(e) => setEditingName(e.target.value)}
-        className="border rounded-lg px-2 py-1 text-sm flex-1 min-w-0"
-        autoFocus
-      />
-      <button
-        type="button"
-        onClick={async () => {
-          if (editingName.trim()) {
-            await updateItemName(group.id, item.id, editingName.trim());
-          }
-          setEditingNameId(null);
-        }}
-        className="bg-green-100 px-2 py-1 rounded-lg text-sm whitespace-nowrap"
-      >
-        Guardar
-      </button>
-      <button
-        type="button"
-        onClick={() => setEditingNameId(null)}
-        className="bg-gray-100 px-2 py-1 rounded-lg text-sm whitespace-nowrap"
-      >
-        Cancelar
-      </button>
-    </div>
-  ) : (
-    <button
-      type="button"
-      onClick={() => {
-        setEditingNameId(item.id);
-        setEditingName(item.name);
-      }}
-      className={`font-medium text-left w-full ${
-        item.purchased ? "line-through text-gray-400" : "text-black"
-      }`}
-    >
-      {item.name} ✎
-    </button>
-  )}
-
-  {editingId === item.id ? (
-    <div className="flex gap-2">
-      <input
-        type="text"
-        value={editingQuantity}
-        onChange={(e) => setEditingQuantity(e.target.value)}
-        className="border rounded-lg px-2 py-1 text-sm w-20"
-        autoFocus
-      />
-      <button
-        type="button"
-        onClick={async () => {
-          await updateItemQuantity(group.id, item.id, editingQuantity);
-          setEditingId(null);
-        }}
-        className="bg-green-100 px-2 py-1 rounded-lg text-sm whitespace-nowrap"
-      >
-        Guardar
-      </button>
-      <button
-        type="button"
-        onClick={() => setEditingId(null)}
-        className="bg-gray-100 px-2 py-1 rounded-lg text-sm whitespace-nowrap"
-      >
-        Cancelar
-      </button>
-    </div>
-  ) : (
-    <button
-      type="button"
-      onClick={() => {
-        setEditingId(item.id);
-        setEditingQuantity(item.quantity);
-      }}
-      className="text-sm text-gray-500 text-left w-full"
-    >
-      Cantidad: {item.quantity || "—"} ✎
-    </button>
-  )}
-</div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => toggleItemPurchased(group.id, item.id)}
-                      className="bg-green-100 hover:bg-green-200 transition px-3 py-2 rounded-xl text-sm"
-                    >
-                      {item.purchased ? "Desmarcar" : "Comprado"}
-                    </button>
-
-                    <button
-                      onClick={() => deleteItemFromGroup(group.id, item.id)}
-                      className="bg-red-100 hover:bg-red-200 transition px-3 py-2 rounded-xl text-sm">
-                      Borrar
-                    </button>
-                  </div>
-                </div>
+                  item={item}
+                  groupId={group.id}
+                  onToggle={() => toggleItemPurchased(group.id, item.id)}
+                  onDelete={() => deleteItemFromGroup(group.id, item.id)}
+                  onUpdateName={(name) => updateItemName(group.id, item.id, name)}
+                  onUpdateQuantity={(quantity) => updateItemQuantity(group.id, item.id, quantity)}
+                />
               ))}
             </div>
           )}

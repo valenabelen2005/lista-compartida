@@ -3,12 +3,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAa3bpwiGO0Uuf15r_VGKifK25gGz4MTNI",
-  authDomain: "lista-compartida-nine.vercel.app", // ← tu URL de Vercel
-  projectId: "life-os-c0a62",
-  storageBucket: "life-os-c0a62.firebasestorage.app",
-  messagingSenderId: "397994721008",
-  appId: "1:397994721008:web:bb1ad0e2c2b52a89b64c35",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
 };
 
 const app = initializeApp(firebaseConfig);
@@ -16,6 +16,4 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: "select_account",
-});
+googleProvider.setCustomParameters({ prompt: "select_account" });
