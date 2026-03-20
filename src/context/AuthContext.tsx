@@ -6,12 +6,10 @@ import {
   type ReactNode,
 } from "react";
 import {
-  // browserLocalPersistence,
-  // getRedirectResult,
-  // signInWithRedirect,
-  // setPersistence,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   updateProfile,
 
@@ -38,21 +36,37 @@ export function useAuth(): AuthContextType {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-    setUser(firebaseUser);
-    setIsAuthLoading(false);
-  });
-  return () => unsubscribe();
-}, []);
-const loginWithGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    setUser(result.user); // ← seteamos directo sin depender de onAuthStateChanged
-  } catch (error) {
-    console.error("Error login:", error);
-  }
-};
+
+  useEffect(() => {
+    // Primero intenta capturar resultado de redirect
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) setUser(result.user);
+      })
+      .catch(console.error)
+      .finally(() => {
+        // Luego escucha cambios de auth normales
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+          setUser(firebaseUser);
+          setIsAuthLoading(false);
+        });
+        return () => unsubscribe();
+      });
+  }, []);
+  const loginWithGoogle = async () => {
+    try {
+      const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        const result = await signInWithPopup(auth, googleProvider);
+        setUser(result.user);
+      }
+    } catch (error) {
+      console.error("Error login:", error);
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
   };

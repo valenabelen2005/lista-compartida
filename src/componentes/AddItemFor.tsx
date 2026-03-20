@@ -7,50 +7,85 @@ interface Props {
 export default function AddItemForm({ onAdd }: Props) {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [error, setError] = useState("");  // ← nuevo
+  const [error, setError] = useState("");
+
   const handleSubmit = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-
     try {
       setError("");
       await onAdd(trimmed, quantity.trim());
       setName("");
       setQuantity("");
     } catch (e) {
-      setError(`Error: ${e}`);  // ← muestra el error en pantalla
+      setError(`Error: ${e}`);
     }
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-      <h2 className="text-xl font-semibold mb-4">Agregar producto</h2>
- {error && (
-        <p className="text-red-500 text-sm mb-3">{error}</p>  // ← visible en móvil
-      )}
-      <div className="flex flex-col gap-3">
+    <>
+      <style>{`
+        .add-form {
+          background: #111827;
+          border: 1px solid #1f2937;
+          border-radius: 14px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .add-input {
+          background: #0b0f19;
+          border: 1px solid #1f2937;
+          border-radius: 8px;
+          padding: 10px 14px;
+          font-size: 14px;
+          color: #f9fafb;
+          outline: none;
+          width: 100%;
+          box-sizing: border-box;
+          transition: border-color 150ms ease;
+        }
+        .add-input::placeholder { color: #374151; }
+        .add-input:focus { border-color: #3b82f6; }
+        .add-btn {
+          width: 100%;
+          padding: 11px 16px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          background: #3b82f6;
+          color: #fff;
+          border: none;
+          transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+        }
+        .add-btn:hover { background: #2563eb; transform: scale(1.02); box-shadow: 0 4px 20px rgba(59,130,246,0.35); }
+        .add-btn:active { transform: scale(0.97); }
+      `}</style>
+
+      <div className="add-form">
+        {error && <p style={{ color: "#ef4444", fontSize: "12px", margin: 0 }}>{error}</p>}
         <input
+          type="text"
+          className="add-input"
+          placeholder="Producto"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Producto"
-          className="border rounded-xl px-4 py-3"
+          onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
         />
-
         <input
+          type="text"
+          className="add-input"
+          placeholder="Cantidad (opcional)"
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
-          placeholder="Cantidad"
-          className="border rounded-xl px-4 py-3"
+          onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
         />
-
-        <button
-          type="button"  
-          onClick={handleSubmit}
-          className="bg-blue-100 hover:bg-blue-200 rounded-xl px-4 py-3"
-        >
-          Añadir
+        <button type="button" className="add-btn" onClick={handleSubmit}>
+          Agregar producto
         </button>
       </div>
-    </div>
+    </>
   );
 }
