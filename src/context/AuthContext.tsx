@@ -12,7 +12,6 @@ import {
   // setPersistence,
   onAuthStateChanged,
   signInWithPopup,
-
   signOut,
   updateProfile,
 
