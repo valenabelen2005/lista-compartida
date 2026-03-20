@@ -37,22 +37,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  useEffect(() => {
-    // Primero intenta capturar resultado de redirect
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) setUser(result.user);
-      })
-      .catch(console.error)
-      .finally(() => {
-        // Luego escucha cambios de auth normales
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          setUser(firebaseUser);
-          setIsAuthLoading(false);
-        });
-        return () => unsubscribe();
-      });
-  }, []);
+useEffect(() => {
+  setIsAuthLoading(true);
+  
+  getRedirectResult(auth)
+    .then((result) => {
+      if (result?.user) {
+        setUser(result.user);
+        setIsAuthLoading(false);
+      }
+    })
+    .catch(console.error);
+
+  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    setUser(firebaseUser);
+    setIsAuthLoading(false);
+  });
+
+  return () => unsubscribe();
+}, []);
 const loginWithGoogle = async () => {
   try {
     await signInWithRedirect(auth, googleProvider);
@@ -60,7 +63,6 @@ const loginWithGoogle = async () => {
     console.error("Error login:", error);
   }
 };
-
   const logout = async () => {
     await signOut(auth);
   };
