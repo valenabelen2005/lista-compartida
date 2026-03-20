@@ -1,10 +1,14 @@
+// import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const { loginWithGoogle } = useAuth();
 
+
+
   return (
     <>
+    
       <style>{`
         .login-root {
           min-height: 100vh;
@@ -40,6 +44,8 @@ export default function LoginPage() {
         .google-btn:active { transform: scale(0.97); }
         .google-btn:focus-visible { box-shadow: 0 0 0 3px rgba(249,250,251,0.3); }
       `}</style>
+
+
 
       <main className="login-root">
         <div style={{ width: "100%", maxWidth: "360px", display: "flex", flexDirection: "column", gap: "32px" }}>

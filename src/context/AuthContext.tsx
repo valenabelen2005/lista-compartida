@@ -36,31 +36,36 @@ export function useAuth(): AuthContextType {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-
 useEffect(() => {
-  setIsAuthLoading(true);
-  
-  getRedirectResult(auth)
-    .then((result) => {
-      if (result?.user) {
-        setUser(result.user);
-        setIsAuthLoading(false);
-      }
-    })
-    .catch(console.error);
-
   const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-    setUser(firebaseUser);
-    setIsAuthLoading(false);
+    // Solo actualiza si hay un usuario real, o si definitivamente no hay sesión
+    if (firebaseUser) {
+      setUser(firebaseUser);
+      setIsAuthLoading(false);
+    } else {
+      // Espera un momento antes de declarar que no hay usuario
+      // evita race condition con el popup
+      setTimeout(() => {
+        setUser((current) => {
+          if (!current) setIsAuthLoading(false);
+          return current;
+        });
+      }, 1000);
+    }
   });
-
   return () => unsubscribe();
 }, []);
 const loginWithGoogle = async () => {
   try {
-    await signInWithRedirect(auth, googleProvider);
-  } catch (error) {
-    console.error("Error login:", error);
+    const result = await signInWithPopup(auth, googleProvider);
+    setUser(result.user); // ← fuerza el estado inmediatamente
+    setIsAuthLoading(false);
+  } catch (error: any) {
+    if (error.code === "auth/popup-blocked") {
+      await signInWithRedirect(auth, googleProvider);
+    } else {
+      console.error("Error login:", error.code, error.message);
+    }
   }
 };
   const logout = async () => {
