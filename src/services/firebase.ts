@@ -17,3 +17,5 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
+
+VITE_FIREBASE_AUTH_DOMAIN=life-os-c0a62.firebaseapp.com
