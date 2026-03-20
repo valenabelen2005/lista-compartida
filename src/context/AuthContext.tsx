@@ -53,19 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => unsubscribe();
       });
   }, []);
-  const loginWithGoogle = async () => {
-    try {
-      const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-      } else {
-        const result = await signInWithPopup(auth, googleProvider);
-        setUser(result.user);
-      }
-    } catch (error) {
-      console.error("Error login:", error);
-    }
-  };
+const loginWithGoogle = async () => {
+  try {
+    await signInWithRedirect(auth, googleProvider);
+  } catch (error) {
+    console.error("Error login:", error);
+  }
+};
 
   const logout = async () => {
     await signOut(auth);
