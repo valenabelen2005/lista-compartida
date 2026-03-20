@@ -6,12 +6,12 @@ import {
   type ReactNode,
 } from "react";
 import {
-  browserLocalPersistence,
-  getRedirectResult,
+  // browserLocalPersistence,
+  // getRedirectResult,
+  // signInWithRedirect,
+  // setPersistence,
   onAuthStateChanged,
-  setPersistence,
   signInWithPopup,
-  signInWithRedirect,
 
   signOut,
   updateProfile,
