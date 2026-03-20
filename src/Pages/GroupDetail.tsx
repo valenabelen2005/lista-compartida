@@ -111,52 +111,53 @@ const group = useMemo(() => {
                   key={item.id}
                   className="border border-gray-200 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4"
                 >
-                  <div>
- {editingNameId === item.id ? (
-  <div className="flex gap-2 mt-1">
-    <input
-      type="text"
-      value={editingName}
-      onChange={(e) => setEditingName(e.target.value)}
-      className="border rounded-lg px-2 py-1 text-sm flex-1"
-      autoFocus
-    />
+<div className="flex-1 min-w-0 flex flex-col gap-1">
+  {editingNameId === item.id ? (
+    <div className="flex gap-2">
+      <input
+        type="text"
+        value={editingName}
+        onChange={(e) => setEditingName(e.target.value)}
+        className="border rounded-lg px-2 py-1 text-sm flex-1 min-w-0"
+        autoFocus
+      />
+      <button
+        type="button"
+        onClick={async () => {
+          if (editingName.trim()) {
+            await updateItemName(group.id, item.id, editingName.trim());
+          }
+          setEditingNameId(null);
+        }}
+        className="bg-green-100 px-2 py-1 rounded-lg text-sm whitespace-nowrap"
+      >
+        Guardar
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditingNameId(null)}
+        className="bg-gray-100 px-2 py-1 rounded-lg text-sm whitespace-nowrap"
+      >
+        Cancelar
+      </button>
+    </div>
+  ) : (
     <button
       type="button"
-      onClick={async () => {
-        if (editingName.trim()) {
-          await updateItemName(group.id, item.id, editingName.trim());
-        }
-        setEditingNameId(null);
+      onClick={() => {
+        setEditingNameId(item.id);
+        setEditingName(item.name);
       }}
-      className="bg-green-100 px-2 py-1 rounded-lg text-sm"
+      className={`font-medium text-left w-full ${
+        item.purchased ? "line-through text-gray-400" : "text-black"
+      }`}
     >
-      Guardar
+      {item.name} ✎
     </button>
-    <button
-      type="button"
-      onClick={() => setEditingNameId(null)}
-      className="bg-gray-100 px-2 py-1 rounded-lg text-sm"
-    >
-      Cancelar
-    </button>
-  </div>
-) : (
-<button
-  type="button"
-  onClick={() => {
-    setEditingNameId(item.id);
-    setEditingName(item.name);
-  }}
-  className={`font-medium text-left w-full py-1 ${
-    item.purchased ? "line-through text-gray-400" : "text-black"
-  }`}
->
-  {item.name} ✎
-</button>
-)}
+  )}
+
   {editingId === item.id ? (
-    <div className="flex gap-2 mt-1">
+    <div className="flex gap-2">
       <input
         type="text"
         value={editingQuantity}
@@ -170,14 +171,14 @@ const group = useMemo(() => {
           await updateItemQuantity(group.id, item.id, editingQuantity);
           setEditingId(null);
         }}
-        className="bg-green-100 px-2 py-1 rounded-lg text-sm"
+        className="bg-green-100 px-2 py-1 rounded-lg text-sm whitespace-nowrap"
       >
         Guardar
       </button>
       <button
         type="button"
         onClick={() => setEditingId(null)}
-        className="bg-gray-100 px-2 py-1 rounded-lg text-sm"
+        className="bg-gray-100 px-2 py-1 rounded-lg text-sm whitespace-nowrap"
       >
         Cancelar
       </button>
@@ -189,13 +190,12 @@ const group = useMemo(() => {
         setEditingId(item.id);
         setEditingQuantity(item.quantity);
       }}
-      className="text-sm text-gray-500 hover:text-gray-700 mt-1"
+      className="text-sm text-gray-500 text-left w-full"
     >
       Cantidad: {item.quantity || "—"} ✎
     </button>
   )}
 </div>
-
                   <div className="flex gap-2">
                     <button
                       onClick={() => toggleItemPurchased(group.id, item.id)}

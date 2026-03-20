@@ -4,7 +4,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAa3bpwiGO0Uuf15r_VGKifK25gGz4MTNI",
-  authDomain: "life-os-c0a62.firebaseapp.com",
+  authDomain: "lista-compartida-nine.vercel.app", // ← tu URL de Vercel
   projectId: "life-os-c0a62",
   storageBucket: "life-os-c0a62.firebasestorage.app",
   messagingSenderId: "397994721008",
