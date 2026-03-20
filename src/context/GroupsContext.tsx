@@ -38,6 +38,7 @@ interface GroupsContextType {
   toggleItemPurchased: (groupId: string, itemId: string) => Promise<void>;
   deleteItemFromGroup: (groupId: string, itemId: string) => Promise<void>;
   updateItemQuantity: (groupId: string, itemId: string, quantity: string) => Promise<void>;
+  updateItemName: (groupId: string, itemId: string, name: string) => Promise<void>;
 }
 
 const GroupsContext = createContext<GroupsContextType | undefined>(undefined);
@@ -162,6 +163,18 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
     },
     [allGroups]
   );
+  const updateItemName = useCallback(
+  async (groupId: string, itemId: string, name: string) => {
+    const group = allGroups.find((g) => g.id === groupId);
+    if (!group) return;
+    await updateDoc(doc(db, "groups", groupId), {
+      items: group.items.map((item) =>
+        item.id === itemId ? { ...item, name } : item
+      ),
+    });
+  },
+  [allGroups]
+);
 
   const toggleItemPurchased = useCallback(
     async (groupId: string, itemId: string) => {
@@ -213,6 +226,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         toggleItemPurchased,
         deleteItemFromGroup,
         updateItemQuantity,
+        updateItemName,
       }}
     >
       {children}

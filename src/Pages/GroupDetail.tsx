@@ -7,12 +7,13 @@ import AddItemForm from "../componentes/AddItemFor";
 type FilterType = "all" | "pending" | "purchased";
 
 export default function GroupDetail() {
-  const { id } = useParams();
-const { myGroups, isLoading, addItemToGroup, toggleItemPurchased, deleteItemFromGroup, updateItemQuantity  } = useGroups();
-  const [filter, setFilter] = useState<FilterType>("all");
+const { id } = useParams();
+const { myGroups, isLoading, addItemToGroup, toggleItemPurchased, deleteItemFromGroup, updateItemQuantity, updateItemName  } = useGroups();
+const [filter, setFilter] = useState<FilterType>("all");
 const [editingId, setEditingId] = useState<string | null>(null);
 const [editingQuantity, setEditingQuantity] = useState("");
- 
+const [editingNameId, setEditingNameId] = useState<string | null>(null);
+const [editingName, setEditingName] = useState("");
 const group = useMemo(() => {
   return myGroups.find((group: GroupType) => group.id === id); 
 }, [myGroups, id]);
@@ -111,10 +112,49 @@ const group = useMemo(() => {
                   className="border border-gray-200 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4"
                 >
                   <div>
-  <p className={`font-medium ${item.purchased ? "line-through text-gray-400" : "text-black"}`}>
-    {item.name}
-  </p>
-
+ {editingNameId === item.id ? (
+  <div className="flex gap-2 mt-1">
+    <input
+      type="text"
+      value={editingName}
+      onChange={(e) => setEditingName(e.target.value)}
+      className="border rounded-lg px-2 py-1 text-sm flex-1"
+      autoFocus
+    />
+    <button
+      type="button"
+      onClick={async () => {
+        if (editingName.trim()) {
+          await updateItemName(group.id, item.id, editingName.trim());
+        }
+        setEditingNameId(null);
+      }}
+      className="bg-green-100 px-2 py-1 rounded-lg text-sm"
+    >
+      Guardar
+    </button>
+    <button
+      type="button"
+      onClick={() => setEditingNameId(null)}
+      className="bg-gray-100 px-2 py-1 rounded-lg text-sm"
+    >
+      Cancelar
+    </button>
+  </div>
+) : (
+<button
+  type="button"
+  onClick={() => {
+    setEditingNameId(item.id);
+    setEditingName(item.name);
+  }}
+  className={`font-medium text-left w-full py-1 ${
+    item.purchased ? "line-through text-gray-400" : "text-black"
+  }`}
+>
+  {item.name} ✎
+</button>
+)}
   {editingId === item.id ? (
     <div className="flex gap-2 mt-1">
       <input
