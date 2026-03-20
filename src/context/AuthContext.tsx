@@ -9,7 +9,6 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signInWithRedirect,
-  getRedirectResult,
   signOut,
   updateProfile,
 
