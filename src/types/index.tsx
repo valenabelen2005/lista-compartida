@@ -3,6 +3,8 @@ export interface ShoppingItemType {
   name: string;
   quantity: string;
   purchased: boolean;
+  addedBy: string;
+  addedByName: string;
 }
 
 export interface GroupType {
@@ -10,7 +12,7 @@ export interface GroupType {
   name: string;
   code?: string;
   createdAt?: number;
-  createdBy: string;   // ← uid del creador
-  members: string[];   // ← uids de los miembros
+  createdBy: string;
+  members: string[];
   items: ShoppingItemType[];
 }

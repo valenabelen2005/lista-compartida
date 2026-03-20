@@ -174,13 +174,16 @@ export default function ItemCard({ item, onToggle, onDelete, onUpdateName, onUpd
               </span>
             </button>
           )}
-
+            {/* Debajo del botón de cantidad, antes de cerrar el div izquierdo */}
+            <span style={{ fontSize: "11px", color: "#374151", marginTop: "2px" }}>
+              Agregado por {item.addedByName || "Alguien"}
+            </span>
         </div>
 
         {/* Acciones */}
         <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
           <button type="button" className="btn-toggle" onClick={onToggle}>
-            {item.purchased ? "Desmarcar" : "Listo"}
+            {item.purchased ? "Desmarcar" : "Comprado"}
           </button>
           <button type="button" className="btn-delete" onClick={onDelete}>
             Borrar

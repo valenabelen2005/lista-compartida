@@ -147,22 +147,24 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
     await deleteDoc(doc(db, "groups", groupId));
   }, [user, allGroups]);
 
-  const addItemToGroup = useCallback(
-    async (groupId: string, itemName: string, quantity: string) => {
-      const group = allGroups.find((g) => g.id === groupId);
-      if (!group) return;
-      const newItem: ShoppingItemType = {
-        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        name: itemName,
-        quantity,
-        purchased: false,
-      };
-      await updateDoc(doc(db, "groups", groupId), {
-        items: [...group.items, newItem],
-      });
-    },
-    [allGroups]
-  );
+const addItemToGroup = useCallback(
+  async (groupId: string, itemName: string, quantity: string) => {
+    const group = allGroups.find((g) => g.id === groupId);
+    if (!group) return;
+    const newItem: ShoppingItemType = {
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      name: itemName,
+      quantity,
+      purchased: false,
+      addedBy: user?.uid ?? "",
+      addedByName: user?.displayName ?? "Alguien",
+    };
+    await updateDoc(doc(db, "groups", groupId), {
+      items: [...group.items, newItem],
+    });
+  },
+  [allGroups, user]
+);
   const updateItemName = useCallback(
   async (groupId: string, itemId: string, name: string) => {
     const group = allGroups.find((g) => g.id === groupId);
