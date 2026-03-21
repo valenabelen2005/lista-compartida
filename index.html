@@ -3,8 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>life-os</title>
+
+    <!-- Mobile viewport optimizado para Capacitor/Android -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- PWA / Android metadata -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0b0f19" />
+    <meta name="application-name" content="Lista Compartida" />
+    <meta name="description" content="Listas de compras compartidas en tiempo real. Coordiná las compras con tu familia o pareja sin fricción." />
+
+    <!-- Open Graph para compartir -->
+    <meta property="og:title" content="Lista Compartida" />
+    <meta property="og:description" content="Listas de compras en tiempo real para grupos" />
+    <meta property="og:type" content="website" />
+
+    <title>Lista Compartida</title>
   </head>
   <body>
     <div id="root"></div>

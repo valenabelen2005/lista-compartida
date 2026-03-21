@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Groups() {
   const { myGroups, isLoading, leaveGroup, deleteGroup } = useGroups();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -70,7 +70,7 @@ export default function Groups() {
                 Mis grupos
               </h1>
               <p style={{ fontSize: "13px", color: "#4b5563", margin: 0, marginTop: "2px" }}>
-                {user?.displayName}
+                {isGuest ? "Modo invitado" : user?.displayName}
               </p>
             </div>
             <button
@@ -104,7 +104,9 @@ export default function Groups() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {myGroups.map((group) => {
-                const isCreator = group.createdBy === user?.uid;
+                const isCreator = isGuest
+                  ? group.createdBy === "guest"
+                  : group.createdBy === user?.uid;
                 return (
                   <div key={group.id} className="group-card">
                     <div

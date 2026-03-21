@@ -1,13 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGroups } from "../context/GroupsContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function JoinGroup() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { joinGroup } = useGroups();
+  const { isGuest, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const handleLogin = async () => {
+    setLoginLoading(true);
+    await loginWithGoogle();
+    setLoginLoading(false);
+  };
 
   const handleJoin = async () => {
     const cleaned = code.trim().toUpperCase();
@@ -16,6 +25,10 @@ export default function JoinGroup() {
       setLoading(true);
       setError("");
       const groupId = await joinGroup(cleaned);
+      if (groupId === "GUEST_CANNOT_JOIN") {
+        setError("Para unirte a grupos de otros necesitás iniciar sesión con Google.");
+        return;
+      }
       if (!groupId) {
         setError("Código inválido. Verificá que esté bien escrito.");
         return;
@@ -97,6 +110,34 @@ export default function JoinGroup() {
               Pidele el código al creador del grupo
             </p>
           </div>
+
+          {/* Banner modo invitado */}
+          {isGuest && (
+            <div style={{
+              background: "rgba(59,130,246,0.07)",
+              border: "1px solid rgba(59,130,246,0.18)",
+              borderRadius: "12px",
+              padding: "14px 16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+            }}>
+              <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af", lineHeight: 1.5 }}>
+                Para unirte a grupos de otros necesitás una cuenta de Google.
+              </p>
+              <button
+                onClick={handleLogin}
+                disabled={loginLoading}
+                style={{
+                  background: "#3b82f6", color: "#fff", border: "none",
+                  borderRadius: "8px", padding: "9px 14px", fontSize: "13px",
+                  fontWeight: 500, cursor: "pointer", opacity: loginLoading ? 0.6 : 1,
+                }}
+              >
+                {loginLoading ? "Iniciando sesión…" : "Iniciar sesión con Google →"}
+              </button>
+            </div>
+          )}
 
           <div style={{
             background: "#111827", border: "1px solid #1f2937",

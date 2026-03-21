@@ -1,9 +1,17 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isGuest, loginWithGoogle, logout } = useAuth();
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const handleLogin = async () => {
+    setLoginLoading(true);
+    await loginWithGoogle();
+    setLoginLoading(false);
+  };
 
   return (
     <>
@@ -118,10 +126,49 @@ export default function Home() {
             </button>
           </div>
 
+          {/* Banner invitado */}
+          {isGuest && (
+            <div style={{
+              background: "rgba(59,130,246,0.07)",
+              border: "1px solid rgba(59,130,246,0.18)",
+              borderRadius: "12px",
+              padding: "14px 16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+            }}>
+              <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af", lineHeight: 1.5 }}>
+                Estás en modo invitado. Los grupos se guardan solo en este dispositivo.
+              </p>
+              <button
+                onClick={handleLogin}
+                disabled={loginLoading}
+                style={{
+                  background: "#3b82f6", color: "#fff", border: "none",
+                  borderRadius: "8px", padding: "9px 14px", fontSize: "13px",
+                  fontWeight: 500, cursor: "pointer", opacity: loginLoading ? 0.6 : 1,
+                }}
+              >
+                {loginLoading ? "Iniciando sesión…" : "Iniciar sesión con Google →"}
+              </button>
+              <button
+                onClick={() => { logout(); }}
+                style={{
+                  background: "transparent", color: "#4b5563", border: "none",
+                  padding: "4px", fontSize: "12px", cursor: "pointer", textDecoration: "underline",
+                }}
+              >
+                Salir del modo invitado
+              </button>
+            </div>
+          )}
+
           {/* Perfil */}
-          <button className="profile-btn" onClick={() => navigate("/profile")} style={{ textAlign: "center", fontSize: "16px", color: "#9ca3af" }}>
-            {user?.displayName ?? "Mi perfil"} →
-          </button>
+          {!isGuest && (
+            <button className="profile-btn" onClick={() => navigate("/profile")} style={{ textAlign: "center", fontSize: "16px", color: "#9ca3af" }}>
+              {user?.displayName ?? "Mi perfil"} →
+            </button>
+          )}
 
         </div>
       </main>

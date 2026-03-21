@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function ProfilePage() {
-  const { user, updateDisplayName, logout } = useAuth();
+  const { user, isGuest, updateDisplayName, logout } = useAuth();
   const [name, setName] = useState(user?.displayName ?? "");
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
+
+  // Si es invitado o no hay usuario, redirigir al home
+  useEffect(() => {
+    if (isGuest || !user) {
+      navigate("/", { replace: true });
+    }
+  }, [isGuest, user, navigate]);
 
   const handleSave = async () => {
     const trimmed = name.trim();
