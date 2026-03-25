@@ -29,6 +29,7 @@ export default function GroupDetail() {
   } = useGroups();
 
   const [filter, setFilter] = useState<FilterType>("pending");
+  const [showAddModal, setShowAddModal] = useState(false);
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [clearConfirm, setClearConfirm] = useState(false);
   const [detailItemId, setDetailItemId] = useState<string | null>(null);
@@ -212,14 +213,20 @@ export default function GroupDetail() {
             </div>
           )}
 
-          {/* Agregar item */}
-          <AddItemForm
-            onAdd={async (name, quantity, price, store, imageUrl, priceMode, notes) => {
-              const exists = group.items.some((item) => item.name.toLowerCase() === name.toLowerCase());
-              if (exists) throw new Error(`"${name}" ya está en la lista`);
-              await addItemToGroup(group.id, name, quantity, price, store, imageUrl, priceMode, notes);
+          {/* Botón agregar */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              width: "100%", minHeight: "50px", borderRadius: "12px",
+              fontSize: "15px", fontWeight: 600, cursor: "pointer",
+              background: "#3b82f6", color: "#fff", border: "none",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+              WebkitTapHighlightColor: "transparent",
+              transition: "background 150ms ease",
             }}
-          />
+          >
+            + Agregar producto
+          </button>
 
           {/* Filtro por estado */}
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -296,6 +303,51 @@ export default function GroupDetail() {
           onClose={() => setDetailItemId(null)}
           onUpdateNotes={(notes) => updateItemNotes(group.id, detailItem.id, notes)}
         />
+      )}
+
+      {/* Modal agregar producto */}
+      {showAddModal && (
+        <div
+          onClick={() => setShowAddModal(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            background: "rgba(0,0,0,0.65)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+            padding: "0 0 16px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#0b0f19", borderRadius: "20px 20px 16px 16px",
+              border: "1px solid #1f2937",
+              width: "100%", maxWidth: "480px",
+              maxHeight: "90vh", overflowY: "auto",
+              padding: "12px 16px 24px",
+              display: "flex", flexDirection: "column", gap: "12px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "16px", fontWeight: 600, color: "#f9fafb" }}>Agregar producto</span>
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{
+                  background: "#1f2937", border: "none", borderRadius: "8px",
+                  color: "#9ca3af", fontSize: "16px", width: "32px", height: "32px",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >✕</button>
+            </div>
+            <AddItemForm
+              onClose={() => setShowAddModal(false)}
+              onAdd={async (name, quantity, price, store, imageUrl, priceMode, notes) => {
+                const exists = group.items.some((item) => item.name.toLowerCase() === name.toLowerCase());
+                if (exists) throw new Error(`"${name}" ya está en la lista`);
+                await addItemToGroup(group.id, name, quantity, price, store, imageUrl, priceMode, notes);
+              }}
+            />
+          </div>
+        </div>
       )}
     </>
   );

@@ -24,9 +24,10 @@ function compressImage(file: File): Promise<string> {
 
 interface Props {
   onAdd: (name: string, quantity: string, price?: number, store?: string, imageUrl?: string, priceMode?: "total" | "unit", notes?: string) => Promise<void>;
+  onClose?: () => void;
 }
 
-export default function AddItemForm({ onAdd }: Props) {
+export default function AddItemForm({ onAdd, onClose }: Props) {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
@@ -65,7 +66,7 @@ export default function AddItemForm({ onAdd }: Props) {
       setCustomStore("");
       setImageUrl("");
       setNotes("");
-      nameRef.current?.focus();
+      onClose?.();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
