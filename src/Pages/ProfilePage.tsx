@@ -31,7 +31,6 @@ export default function ProfilePage() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/");
   };
 
   return (

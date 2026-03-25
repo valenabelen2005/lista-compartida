@@ -8,18 +8,13 @@ import {
 import {
   onAuthStateChanged,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   signOut,
   updateProfile,
   type User,
 } from "firebase/auth";
 import { auth, googleProvider } from "../services/firebase";
 
-const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
 const GUEST_MODE_KEY = "lista-guest-mode";
-const LOGIN_ERROR_KEY = "lista-login-error";
 
 interface AuthContextType {
   user: User | null;
@@ -47,43 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Captura resultado del redirect de Google (mobile)
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          setUser(result.user);
-          localStorage.removeItem(GUEST_MODE_KEY);
-          setIsGuest(false);
-          localStorage.removeItem(LOGIN_ERROR_KEY);
-        }
-      })
-      .catch((err) => {
-        console.error("getRedirectResult error:", err.code);
-        const msg =
-          err.code === "auth/network-request-failed"
-            ? "Sin conexión. Verificá tu internet e intentá de nuevo."
-            : "Error al iniciar sesión con Google. Intentá de nuevo.";
-        localStorage.setItem(LOGIN_ERROR_KEY, msg);
-        setLoginError(msg);
-      });
-
-    // Recuperar error de redirect previo si quedó guardado
-    const savedError = localStorage.getItem(LOGIN_ERROR_KEY);
-    if (savedError) {
-      setLoginError(savedError);
-      localStorage.removeItem(LOGIN_ERROR_KEY);
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
         localStorage.removeItem(GUEST_MODE_KEY);
-        localStorage.removeItem(LOGIN_ERROR_KEY);
         setIsGuest(false);
       }
       setIsAuthLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -95,19 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = async () => {
     setLoginError(null);
     try {
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-        // La página se recarga — el resultado se captura en getRedirectResult
-        return;
-      }
       const result = await signInWithPopup(auth, googleProvider);
       setUser(result.user);
       localStorage.removeItem(GUEST_MODE_KEY);
-      localStorage.removeItem(LOGIN_ERROR_KEY);
       setIsGuest(false);
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
-
       if (
         err.code === "auth/popup-closed-by-user" ||
         err.code === "auth/cancelled-popup-request"
@@ -133,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     await signOut(auth);
-    setUser(null);
+    // onAuthStateChanged se encarga de setUser(null)
   };
 
   const updateDisplayName = async (name: string) => {
