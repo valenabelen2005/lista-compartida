@@ -6,7 +6,7 @@ import AddItemForm from "../componentes/AddItemFor";
 import ItemCard from "../componentes/ItemCard";
 import ItemDetailModal from "../componentes/ItemDetailModal";
 
-type FilterType = "all" | "pending" | "purchased";
+type FilterType = "pending" | "purchased";
 
 async function shareGroupCode(name: string, code: string) {
   const text = `Unite a mi lista "${name}" en Lista Compartida 🛒\nCódigo: ${code}`;
@@ -28,7 +28,7 @@ export default function GroupDetail() {
     updateItemQuantity, updateItemName, updateItemPrice, updateItemNotes, clearPurchasedItems,
   } = useGroups();
 
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [filter, setFilter] = useState<FilterType>("pending");
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [clearConfirm, setClearConfirm] = useState(false);
   const [detailItemId, setDetailItemId] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export default function GroupDetail() {
     if (!group) return [];
     let items = group.items;
     if (filter === "pending") items = items.filter((i) => !i.purchased);
-    else if (filter === "purchased") items = items.filter((i) => i.purchased);
+    else items = items.filter((i) => i.purchased);
     if (storeFilter !== "all") items = items.filter((i) => (i.store ?? "") === storeFilter);
     return items;
   }, [group, filter, storeFilter]);
@@ -93,7 +93,7 @@ export default function GroupDetail() {
     if (!clearConfirm) { setClearConfirm(true); return; }
     await clearPurchasedItems(group!.id);
     setClearConfirm(false);
-    setFilter("all");
+    setFilter("pending");
   };
 
   if (isLoading) return (
@@ -224,9 +224,9 @@ export default function GroupDetail() {
           {/* Filtro por estado */}
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <div style={{ display: "flex", gap: "6px", flex: 1 }}>
-              {(["all", "pending", "purchased"] as FilterType[]).map((f) => (
+              {(["pending", "purchased"] as FilterType[]).map((f) => (
                 <button key={f} className={`filter-btn ${filter === f ? "active" : "inactive"}`} onClick={() => setFilter(f)}>
-                  {f === "all" ? "Todos" : f === "pending" ? "Pendientes" : "Comprados"}
+                  {f === "pending" ? `Pendientes (${pendingCount})` : `Comprados (${purchasedCount})`}
                 </button>
               ))}
             </div>
@@ -265,7 +265,7 @@ export default function GroupDetail() {
               <div style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: "14px", padding: "36px", textAlign: "center" }}>
                 <p style={{ color: "#4b5563", fontSize: "14px", margin: 0 }}>
                   {storeFilter !== "all" ? `Sin productos de ${storeFilter} en este filtro` :
-                    filter === "all" ? "Lista vacía · agregá un producto arriba" :
+                    group.items.length === 0 ? "Lista vacía · agregá un producto arriba" :
                     filter === "pending" ? "¡Todo comprado! 🎉" : "Todavía no compraste nada"}
                 </p>
               </div>

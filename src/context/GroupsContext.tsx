@@ -280,6 +280,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         name: itemName,
         quantity,
+        createdAt: Date.now(),
         ...(price !== undefined && price > 0 ? { price, priceMode: priceMode ?? "unit" } : {}),
         ...(store ? { store } : {}),
         ...(imageUrl ? { imageUrl } : {}),

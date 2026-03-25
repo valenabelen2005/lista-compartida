@@ -52,6 +52,9 @@ export default function ItemCard({
   const formatPrice = (p: number) =>
     p.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 });
 
+  const fmtDate = (ts: number) =>
+    new Date(ts).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
   const p = item.purchased;
 
   return (
@@ -208,6 +211,25 @@ export default function ItemCard({
               {item.quantity || "Sin cantidad"} · {item.addedByName || "Alguien"}
             </span>
           </button>
+        )}
+
+        {/* Fechas */}
+        {!editingField && (item.createdAt || item.purchasedAt) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "1px" }}>
+            {item.createdAt && (
+              <span style={{ fontSize: "11px", color: "#4b5563" }}>
+                Agregado: {fmtDate(item.createdAt)}
+              </span>
+            )}
+            {item.purchasedAt && (
+              <>
+                <span style={{ fontSize: "11px", color: "#374151" }}>·</span>
+                <span style={{ fontSize: "11px", color: "#10b981" }}>
+                  Comprado: {fmtDate(item.purchasedAt)}
+                </span>
+              </>
+            )}
+          </div>
         )}
 
         {/* Precio + tienda en la misma fila */}

@@ -8,6 +8,7 @@ export interface ShoppingItemType {
   addedBy: string;
   addedByName: string;
   category?: string;       // categoría (para futuras versiones)
+  createdAt?: number;      // timestamp cuando se agregó
   purchasedAt?: number;    // timestamp cuando se marcó comprado
   store?: string;          // tienda (opcional)
   imageUrl?: string;       // foto del producto en base64 (opcional)

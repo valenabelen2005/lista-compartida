@@ -24,6 +24,9 @@ export default function ItemDetailModal({ item, onClose, onUpdateNotes }: Props)
   const fmt = (p: number) =>
     p.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 });
 
+  const fmtDate = (ts: number) =>
+    new Date(ts).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
   return (
     <>
     <div
@@ -115,6 +118,7 @@ export default function ItemDetailModal({ item, onClose, onUpdateNotes }: Props)
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <Row label="Cantidad" value={item.quantity || "Sin cantidad"} />
             <Row label="Agregado por" value={item.addedByName || "Alguien"} />
+            {item.createdAt && <Row label="Fecha de agregado" value={fmtDate(item.createdAt)} />}
             {item.price !== undefined && item.price > 0 && (
               <Row
                 label="Precio"
@@ -124,6 +128,7 @@ export default function ItemDetailModal({ item, onClose, onUpdateNotes }: Props)
             {item.store && (
               <Row label="Tienda" value={`🛒 ${item.store}`} />
             )}
+            {item.purchasedAt && <Row label="Fecha de compra" value={fmtDate(item.purchasedAt)} />}
           </div>
 
           {/* Notas */}
