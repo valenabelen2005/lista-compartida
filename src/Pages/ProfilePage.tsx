@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAvatar } from "../hooks/useAvatar";
+import UserAvatar from "../componentes/UserAvatar";
+import AvatarSelector from "../componentes/AvatarSelector";
 
 export default function ProfilePage() {
   const { user, isGuest, updateDisplayName, logout } = useAuth();
   const [name, setName] = useState(user?.displayName ?? "");
   const [saving, setSaving] = useState(false);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const { avatar, setAvatar } = useAvatar(user?.uid);
   const navigate = useNavigate();
 
   // Si es invitado o no hay usuario, redirigir al home
@@ -97,36 +102,42 @@ export default function ProfilePage() {
       `}</style>
 
       <main className="page-root">
-        <div style={{ width: "100%", maxWidth: "360px", display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ width: "100%", maxWidth: "360px", display: "flex", flexDirection: "column", gap: "28px" }}>
 
           <button className="back-btn" onClick={() => navigate(-1)}>← Volver</button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            {user?.photoURL ? (
-              <img
-                src={user.photoURL}
-                alt="foto"
-                style={{ width: "48px", height: "48px", borderRadius: "50%", border: "2px solid #1f2937" }}
-              />
-            ) : (
-              <div style={{
-                width: "48px", height: "48px", borderRadius: "50%",
-                background: "rgba(59,130,246,0.15)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "20px", color: "#3b82f6",
-              }}>
-                {user?.displayName?.[0]?.toUpperCase() ?? "?"}
-              </div>
-            )}
-            <div>
-              <p style={{ fontSize: "16px", fontWeight: 600, color: "#f9fafb", margin: 0 }}>
+          {/* Avatar centrado */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+            <button
+              onClick={() => setSelectorOpen(true)}
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", position: "relative" }}
+              title="Cambiar avatar"
+            >
+              <UserAvatar user={user} avatar={avatar} size={76} />
+              <span style={{
+                position: "absolute", bottom: 2, right: 2,
+                width: "22px", height: "22px", borderRadius: "50%",
+                background: "#3b82f6", border: "2px solid #0b0f19",
+                fontSize: "11px", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>✏️</span>
+            </button>
+            <div style={{ textAlign: "center" }}>
+              <p style={{ fontSize: "18px", fontWeight: 700, color: "#f9fafb", margin: 0 }}>
                 {user?.displayName ?? "Sin nombre"}
               </p>
-              <p style={{ fontSize: "13px", color: "#4b5563", margin: 0 }}>
+              <p style={{ fontSize: "13px", color: "#4b5563", margin: 0, marginTop: "3px" }}>
                 {user?.email}
               </p>
             </div>
           </div>
+
+          {selectorOpen && (
+            <AvatarSelector
+              current={avatar}
+              onSelect={setAvatar}
+              onClose={() => setSelectorOpen(false)}
+            />
+          )}
 
           <div style={{
             background: "#111827", border: "1px solid #1f2937",

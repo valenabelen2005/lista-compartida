@@ -9,8 +9,11 @@ export default function Home() {
 
   const handleLogin = async () => {
     setLoginLoading(true);
-    await loginWithGoogle();
-    setLoginLoading(false);
+    try {
+      await loginWithGoogle();
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
   return (

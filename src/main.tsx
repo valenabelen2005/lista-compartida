@@ -5,15 +5,18 @@ import "./index.css";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { GroupsProvider } from "./context/GroupsContext";
+import { NotificationProvider } from "./context/NotificationContext";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider>          {/* ← AuthProvider envuelve GroupsProvider */}
-        <GroupsProvider>
-          <App />
-        </GroupsProvider>
-      </AuthProvider>
+      <NotificationProvider>
+        <AuthProvider>
+          <GroupsProvider>
+            <App />
+          </GroupsProvider>
+        </AuthProvider>
+      </NotificationProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

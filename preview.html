@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lista Compartida – Preview</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: #060a13;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #f9fafb;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+/* ─── PHONE SHELL ─── */
+.phone-shell {
+  width: 390px;
+  height: 820px;
+  background: #0b0f19;
+  border-radius: 44px;
+  border: 1.5px solid #1f2937;
+  box-shadow: 0 0 0 7px #0d1117, 0 30px 70px rgba(0,0,0,0.8);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dynamic Island decoration */
+.phone-shell::before {
+  content: '';
+  position: absolute;
+  top: 12px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 34px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 100;
+}
+
+/* ─── SCREEN ─── */
+#screen {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  margin-top: 0;
+}
+
+/* ─── VIEWS ─── */
+.view {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: #0b0f19;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+  transform: translateY(8px);
+}
+.view::-webkit-scrollbar { display: none; }
+.view.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+
+/* ─── TOKENS ─── */
+:root {
+  --blue: #3b82f6;
+  --green: #10b981;
+  --red: #ef4444;
+  --card: #111827;
+  --border: #1f2937;
+  --muted: #6b7280;
+  --dim: #4b5563;
+}
+
+/* ─── SHARED COMPONENTS ─── */
+.page-content { padding: 60px 20px 100px; }
+
+.app-badge {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.app-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: rgba(59,130,246,0.15);
+  display: flex; align-items: center; justify-content: center; font-size: 17px;
+}
+.app-label {
+  font-size: 11px; font-weight: 600; color: var(--blue);
+  letter-spacing: 1px; text-transform: uppercase;
+}
+
+.btn {
+  width: 100%; min-height: 50px; border-radius: 12px;
+  font-size: 15px; font-weight: 600; cursor: pointer; border: none;
+  transition: transform 100ms, background 100ms, opacity 100ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:active { background: #2563eb; }
+.btn-primary:disabled { opacity: 0.4; cursor: default; transform: none; }
+.btn-ghost { background: transparent; color: #f9fafb; border: 1px solid var(--border); }
+.btn-ghost:active { background: #161e2e; }
+.btn-neutral { background: #161e2e; color: #f9fafb; }
+.btn-neutral:active { background: #1e2d40; }
+.btn-danger { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+.btn-danger:active { background: rgba(239,68,68,0.2); }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+
+.input {
+  width: 100%; background: #0b0f19; border: 1px solid var(--border);
+  border-radius: 10px; padding: 13px 14px; font-size: 15px;
+  color: #f9fafb; outline: none; box-sizing: border-box;
+  transition: border-color 150ms; -webkit-appearance: none;
+}
+.input::placeholder { color: #374151; }
+.input:focus { border-color: var(--blue); }
+
+.back-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; color: var(--dim); display: flex;
+  align-items: center; gap: 6px; min-height: 44px; padding: 0;
+  transition: color 150ms; margin-bottom: 4px;
+}
+.back-btn:active { color: #f9fafb; }
+
+.section-title {
+  font-size: 22px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.3px;
+}
+.section-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+.error-box {
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--red);
+  margin-bottom: 10px;
+}
+.success-box {
+  background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--green);
+  margin-bottom: 10px;
+}
+
+/* ─── BOTTOM NAV ─── */
+.bottom-nav {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(11,15,25,0.97);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  display: flex; padding: 8px 0 20px;
+  z-index: 50;
+}
+.nav-tab {
+  flex: 1; background: none; border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 10px; color: var(--muted); padding: 4px 0;
+  transition: color 150ms; -webkit-tap-highlight-color: transparent;
+}
+.nav-tab span { font-size: 21px; line-height: 1; }
+.nav-tab.active { color: var(--blue); }
+
+/* ─── LOGIN ─── */
+#v-login {
+  background: #0b0f19;
+  background-image: radial-gradient(ellipse 140% 60% at 50% -5%, rgba(59,130,246,0.15), transparent);
+}
+#v-login .page-content {
+  padding-top: 80px;
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: 100%;
+}
+.google-btn {
+  width: 100%; min-height: 52px; border-radius: 12px;
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  background: #f9fafb; color: #111827; border: none;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform 100ms, background 100ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.google-btn:active { transform: scale(0.97); background: #e5e7eb; }
+
+/* ─── HOME ─── */
+#v-home {
+  background: #0b0f19;
+  background-image: radial-gradient(ellipse 160% 60% at 50% -5%, rgba(59,130,246,0.18), transparent);
+}
+
+/* ─── GROUPS ─── */
+.group-row {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 14px 16px; display: flex; align-items: center; gap: 14px;
+  margin-bottom: 10px; cursor: pointer; transition: background 150ms;
+  position: relative; overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.group-row:active { background: #161e2e; }
+.group-avatar {
+  width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
+  background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.18);
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.group-name { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.group-meta { font-size: 12px; color: var(--muted); }
+.group-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.pill {
+  font-size: 11px; font-weight: 600; border-radius: 20px; padding: 4px 10px;
+}
+.pill-red { background: rgba(239,68,68,0.12); color: var(--red); }
+.pill-green { background: rgba(16,185,129,0.12); color: var(--green); }
+
+/* ─── DETAIL ─── */
+#v-detail {
+  background: #0b0f19;
+  background-image: radial-gradient(ellipse 120% 60% at 50% -5%, rgba(59,130,246,0.18), transparent);
+}
+.share-btn {
+  min-height: 38px; padding: 0 14px; border-radius: 10px; font-size: 13px;
+  font-weight: 500; cursor: pointer; white-space: nowrap; border: none;
+  background: rgba(59,130,246,0.1); color: var(--blue);
+  border: 1px solid rgba(59,130,246,0.2); transition: background 150ms;
+}
+.share-btn:active { background: rgba(59,130,246,0.2); }
+
+.total-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px 16px; display: flex; justify-content: space-between; align-items: center;
+}
+
+.add-form {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 14px; display: flex; flex-direction: column; gap: 10px;
+}
+
+.filter-row { display: flex; gap: 6px; align-items: center; }
+.filter-btn {
+  flex: 1; padding: 9px 6px; border-radius: 8px; font-size: 12px; font-weight: 500;
+  cursor: pointer; border: none; min-height: 36px; transition: all 150ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.filter-btn.on { background: #f9fafb; color: #0b0f19; }
+.filter-btn.off { background: var(--card); color: var(--muted); border: 1px solid var(--border); }
+.clear-btn {
+  min-height: 36px; padding: 0 12px; border-radius: 8px; font-size: 12px;
+  cursor: pointer; white-space: nowrap; background: transparent;
+  color: var(--muted); border: 1px solid var(--border); transition: all 150ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.clear-btn.danger { color: var(--red); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); }
+
+/* Item cards */
+.item-wrap { position: relative; overflow: hidden; border-radius: 14px; margin-bottom: 8px; }
+.item-bg-delete {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 76px;
+  background: var(--red); display: flex; align-items: center; justify-content: center;
+  font-size: 22px; cursor: pointer; border-radius: 14px;
+}
+.item-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 13px 12px; display: flex; align-items: center; gap: 12px;
+  transition: transform 220ms ease; touch-action: pan-y;
+}
+.item-card.done { opacity: 0.45; }
+.circle-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid var(--border); background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0; color: transparent; transition: all 150ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.circle-btn.checked { background: rgba(16,185,129,0.15); border-color: var(--green); color: var(--green); }
+.circle-btn:active { transform: scale(0.88); }
+.item-name-text { font-size: 15px; font-weight: 500; line-height: 1.4; }
+.item-name-text.crossed { text-decoration: line-through; color: var(--dim); }
+.item-sub-text { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.price-chip {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
+  color: var(--green); background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 6px; padding: 3px 8px; margin-top: 3px; cursor: pointer;
+}
+.no-price-btn {
+  font-size: 11px; color: #374151; border: 1px dashed var(--border);
+  border-radius: 6px; padding: 3px 8px; margin-top: 3px; cursor: pointer; background: none;
+}
+.item-x-btn {
+  width: 40px; height: 40px; border: none; background: transparent; color: #374151;
+  font-size: 15px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; border-radius: 8px;
+  -webkit-tap-highlight-color: transparent; transition: all 150ms;
+}
+.item-x-btn:active { color: var(--red); background: rgba(239,68,68,0.1); }
+.empty-state {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 36px; text-align: center; color: var(--dim); font-size: 14px;
+}
+
+/* ─── PROFILE ─── */
+.avatar-circle {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(59,130,246,0.15); border: 2px solid rgba(59,130,246,0.25);
+  display: flex; align-items: center; justify-content: center; font-size: 32px;
+}
+.stat-row {
+  display: flex; justify-content: space-between; padding: 13px 0;
+  border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.stat-row:last-child { border-bottom: none; }
+
+/* ─── MODAL (create/join) ─── */
+.modal-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px); z-index: 200;
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 200ms;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-sheet {
+  background: #111827; border: 1px solid var(--border);
+  border-radius: 24px 24px 0 0; padding: 20px 20px 40px;
+  width: 100%; transform: translateY(100%);
+  transition: transform 250ms cubic-bezier(0.32,0.72,0,1);
+}
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+.modal-handle {
+  width: 40px; height: 4px; background: #374151; border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+
+/* ─── CONFIRM DIALOG ─── */
+.confirm-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px); z-index: 300;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity 180ms;
+}
+.confirm-overlay.open { opacity: 1; pointer-events: all; }
+.confirm-box {
+  background: #111827; border: 1px solid var(--border); border-radius: 20px;
+  padding: 24px; width: 100%; max-width: 320px;
+}
+.confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.confirm-msg { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.confirm-actions { display: flex; gap: 10px; }
+.confirm-actions .btn { min-height: 44px; font-size: 14px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div class="phone-shell">
+  <div id="screen">
+
+    <!-- ══════════ LOGIN ══════════ -->
+    <div class="view active" id="v-login">
+      <div class="page-content">
+        <div class="app-badge">
+          <div class="app-icon">🛒</div>
+          <span class="app-label">Lista Compartida</span>
+        </div>
+        <h1 style="font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:8px">Bienvenido</h1>
+        <p style="font-size:15px;color:#9ca3af;margin-bottom:44px">Iniciá sesión para continuar</p>
+        <div class="card" style="margin-bottom:20px">
+          <button class="google-btn" onclick="App.login()">
+            <svg width="18" height="18" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            Continuar con Google
+          </button>
+        </div>
+        <p style="font-size:12px;color:#374151;text-align:center">Al continuar aceptás los términos de uso.</p>
+      </div>
+    </div>
+
+    <!-- ══════════ HOME ══════════ -->
+    <div class="view" id="v-home">
+      <div class="page-content" style="background-image:radial-gradient(ellipse 160% 60% at 50% -5%, rgba(59,130,246,0.18), transparent)">
+        <div class="app-badge">
+          <div class="app-icon">🛒</div>
+          <span class="app-label">Lista Compartida</span>
+        </div>
+        <h1 style="font-size:26px;font-weight:700;letter-spacing:-0.5px;margin-bottom:6px">Compras en equipo,<br>sin fricción.</h1>
+        <p style="font-size:15px;color:#9ca3af;margin-bottom:28px">Creá un grupo, compartí el código, listo.</p>
+        <div class="card" style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+          <button class="btn btn-primary" onclick="App.openModal('create')">Crear un grupo nuevo</button>
+          <button class="btn btn-ghost" onclick="App.openModal('join')">Unirse con código</button>
+          <button class="btn btn-neutral" onclick="App.go('groups')">Ver mis grupos</button>
+        </div>
+        <button onclick="App.go('profile')" style="background:none;border:none;color:#9ca3af;font-size:15px;width:100%;text-align:center;cursor:pointer;padding:8px 0">
+          Valen →
+        </button>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-tab active" onclick="App.go('home')"><span>🏠</span>Inicio</button>
+        <button class="nav-tab" onclick="App.go('groups')"><span>📋</span>Grupos</button>
+        <button class="nav-tab" onclick="App.go('profile')"><span>👤</span>Perfil</button>
+      </div>
+    </div>
+
+    <!-- ══════════ GROUPS ══════════ -->
+    <div class="view" id="v-groups">
+      <div class="page-content">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <h2 class="section-title" style="margin-bottom:0">Mis grupos</h2>
+          <button class="btn btn-primary" style="width:auto;min-height:36px;padding:0 14px;font-size:13px" onclick="App.openModal('create')">+ Nuevo</button>
+        </div>
+        <p class="section-sub" id="groups-count">Sin grupos todavía</p>
+        <div id="groups-list"></div>
+        <div id="groups-empty" class="empty-state" style="display:none">
+          Todavía no tenés grupos.<br>¡Creá uno o unite con un código!
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-tab" onclick="App.go('home')"><span>🏠</span>Inicio</button>
+        <button class="nav-tab active" onclick="App.go('groups')"><span>📋</span>Grupos</button>
+        <button class="nav-tab" onclick="App.go('profile')"><span>👤</span>Perfil</button>
+      </div>
+    </div>
+
+    <!-- ══════════ DETAIL ══════════ -->
+    <div class="view" id="v-detail">
+      <div class="page-content" style="background-image:radial-gradient(ellipse 120% 60% at 50% -5%, rgba(59,130,246,0.18), transparent)">
+        <button class="back-btn" onclick="App.go('groups')">← Mis grupos</button>
+
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">
+          <h2 id="detail-name" style="font-size:22px;font-weight:700;flex:1"></h2>
+          <button class="share-btn" onclick="App.shareCode()">Compartir 🔗</button>
+        </div>
+        <div id="detail-meta" style="font-size:12px;color:var(--dim);margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap"></div>
+
+        <div id="detail-total" style="display:none" class="total-card" style="margin-bottom:14px">
+          <div id="detail-total-inner"></div>
+          <span style="font-size:24px">🧮</span>
+        </div>
+
+        <!-- Add form -->
+        <div class="add-form" style="margin-bottom:14px">
+          <div id="add-error" style="display:none" class="error-box"></div>
+          <input class="input" id="add-name" placeholder="Nombre del producto" autocomplete="off" autocapitalize="words">
+          <div style="display:flex;gap:8px">
+            <input class="input" id="add-qty" placeholder="Cantidad" style="flex:1">
+            <input class="input" id="add-price" type="number" inputmode="decimal" placeholder="Precio $" style="flex:1">
+          </div>
+          <button class="btn btn-primary" onclick="App.addItem()">Agregar producto</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-row" style="margin-bottom:12px">
+          <button class="filter-btn on"  onclick="App.setFilter('all',this)">Todos</button>
+          <button class="filter-btn off" onclick="App.setFilter('pending',this)">Pendientes</button>
+          <button class="filter-btn off" onclick="App.setFilter('done',this)">Comprados</button>
+          <button class="clear-btn" id="clear-btn" onclick="App.clearDone()">Limpiar ✓</button>
+        </div>
+
+        <div id="item-list"></div>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-tab" onclick="App.go('home')"><span>🏠</span>Inicio</button>
+        <button class="nav-tab active" onclick="App.go('groups')"><span>📋</span>Grupos</button>
+        <button class="nav-tab" onclick="App.go('profile')"><span>👤</span>Perfil</button>
+      </div>
+    </div>
+
+    <!-- ══════════ PROFILE ══════════ -->
+    <div class="view" id="v-profile">
+      <div class="page-content">
+        <button class="back-btn" onclick="App.go('home')" style="margin-bottom:20px">← Inicio</button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:28px">
+          <div class="avatar-circle">👤</div>
+          <div style="font-size:18px;font-weight:700">Valen</div>
+          <div style="font-size:13px;color:var(--muted)">valen.abelen2005@gmail.com</div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="stat-row"><span style="color:#9ca3af">Grupos activos</span><span id="stat-groups" style="font-weight:600">0</span></div>
+          <div class="stat-row"><span style="color:#9ca3af">Productos agregados</span><span id="stat-items" style="font-weight:600">0</span></div>
+          <div class="stat-row"><span style="color:#9ca3af">Productos comprados</span><span id="stat-done" style="font-weight:600;color:var(--green)">0</span></div>
+        </div>
+        <button class="btn btn-danger" onclick="App.logout()">Cerrar sesión</button>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-tab" onclick="App.go('home')"><span>🏠</span>Inicio</button>
+        <button class="nav-tab" onclick="App.go('groups')"><span>📋</span>Grupos</button>
+        <button class="nav-tab active" onclick="App.go('profile')"><span>👤</span>Perfil</button>
+      </div>
+    </div>
+
+    <!-- ══════════ MODAL: CREAR GRUPO ══════════ -->
+    <div class="modal-overlay" id="modal-create" onclick="App.closeModals(event)">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">Crear grupo nuevo</div>
+        <div id="create-error" style="display:none" class="error-box"></div>
+        <input class="input" id="create-name" placeholder="Nombre del grupo" autocomplete="off" style="margin-bottom:12px">
+        <button class="btn btn-primary" onclick="App.createGroup()">Crear grupo</button>
+        <button class="btn btn-ghost" onclick="App.closeModals()" style="margin-top:8px">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- ══════════ MODAL: UNIRSE ══════════ -->
+    <div class="modal-overlay" id="modal-join" onclick="App.closeModals(event)">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">Unirse a un grupo</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Ingresá el código de 6 letras que te compartieron.</p>
+        <div id="join-error" style="display:none" class="error-box"></div>
+        <div id="join-success" style="display:none" class="success-box"></div>
+        <input class="input" id="join-code" placeholder="Ej: HXKF29" maxlength="6"
+          style="text-transform:uppercase;letter-spacing:3px;font-size:18px;font-weight:600;text-align:center;margin-bottom:12px"
+          oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-primary" onclick="App.joinGroup()">Unirse al grupo</button>
+        <button class="btn btn-ghost" onclick="App.closeModals()" style="margin-top:8px">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- ══════════ MODAL: ELIMINAR GRUPO ══════════ -->
+    <div class="confirm-overlay" id="confirm-delete-group">
+      <div class="confirm-box">
+        <div class="confirm-title">¿Eliminar grupo?</div>
+        <div class="confirm-msg" id="confirm-delete-msg">Esta acción no se puede deshacer.</div>
+        <div class="confirm-actions">
+          <button class="btn btn-ghost" onclick="App.closeConfirm()" style="flex:1">Cancelar</button>
+          <button class="btn btn-danger" onclick="App.confirmDeleteGroup()" style="flex:1">Eliminar</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screen -->
+</div><!-- /phone-shell -->
+
+<script>
+// ════════════════════════════════════════
+//  APP STATE
+// ════════════════════════════════════════
+const state = {
+  loggedIn: false,
+  currentView: 'login',
+  currentFilter: 'all',
+  activeGroupId: null,
+  pendingDeleteGroupId: null,
+  clearConfirmStep: false,
+  groups: [],   // { id, name, code, items: [{id,name,qty,price,done}] }
+  nextId: 1,
+};
+
+function uid() { return 'id' + (state.nextId++); }
+function genCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+// ════════════════════════════════════════
+//  APP CONTROLLER
+// ════════════════════════════════════════
+const App = {
+
+  // ── AUTH ──
+  login() {
+    state.loggedIn = true;
+    App.go('home');
+  },
+  logout() {
+    state.loggedIn = false;
+    state.groups = [];
+    state.nextId = 1;
+    App.go('login');
+  },
+
+  // ── NAVIGATION ──
+  go(view) {
+    if (!state.loggedIn && view !== 'login') return;
+    App.closeModals();
+
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const target = document.getElementById('v-' + view);
+    if (!target) return;
+    target.classList.add('active');
+    target.scrollTop = 0;
+    state.currentView = view;
+
+    if (view === 'groups') App.renderGroups();
+    if (view === 'detail') App.renderDetail();
+    if (view === 'profile') App.renderProfile();
+  },
+
+  // ── MODALS ──
+  openModal(name) {
+    // reset fields
+    if (name === 'create') {
+      document.getElementById('create-name').value = '';
+      document.getElementById('create-error').style.display = 'none';
+    }
+    if (name === 'join') {
+      document.getElementById('join-code').value = '';
+      document.getElementById('join-error').style.display = 'none';
+      document.getElementById('join-success').style.display = 'none';
+    }
+    const overlay = document.getElementById('modal-' + name);
+    overlay.classList.add('open');
+    setTimeout(() => overlay.querySelector('input')?.focus(), 250);
+  },
+  closeModals(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+    state.clearConfirmStep = false;
+    const cb = document.getElementById('clear-btn');
+    if (cb) { cb.textContent = 'Limpiar ✓'; cb.classList.remove('danger'); }
+  },
+  closeConfirm() {
+    document.getElementById('confirm-delete-group').classList.remove('open');
+    state.pendingDeleteGroupId = null;
+  },
+
+  // ── GROUPS ──
+  createGroup() {
+    const name = document.getElementById('create-name').value.trim();
+    const errEl = document.getElementById('create-error');
+    if (!name) {
+      errEl.textContent = 'Escribí un nombre para el grupo.';
+      errEl.style.display = 'block';
+      return;
+    }
+    const group = { id: uid(), name, code: genCode(), items: [] };
+    state.groups.push(group);
+    App.closeModals();
+    state.activeGroupId = group.id;
+    App.go('detail');
+  },
+
+  joinGroup() {
+    const code = document.getElementById('join-code').value.trim().toUpperCase();
+    const errEl = document.getElementById('join-error');
+    const okEl  = document.getElementById('join-success');
+    errEl.style.display = 'none';
+    okEl.style.display  = 'none';
+
+    if (code.length < 4) {
+      errEl.textContent = 'El código debe tener al menos 4 caracteres.';
+      errEl.style.display = 'block';
+      return;
+    }
+    const found = state.groups.find(g => g.code === code);
+    if (!found) {
+      errEl.textContent = `No existe ningún grupo con el código "${code}". Verificá que esté bien escrito.`;
+      errEl.style.display = 'block';
+      return;
+    }
+    okEl.textContent = `¡Te uniste a "${found.name}"!`;
+    okEl.style.display = 'block';
+    setTimeout(() => {
+      App.closeModals();
+      state.activeGroupId = found.id;
+      App.go('detail');
+    }, 1200);
+  },
+
+  openGroup(id) {
+    state.activeGroupId = id;
+    state.currentFilter = 'all';
+    App.go('detail');
+  },
+
+  promptDeleteGroup(id) {
+    state.pendingDeleteGroupId = id;
+    const g = state.groups.find(x => x.id === id);
+    document.getElementById('confirm-delete-msg').textContent =
+      `¿Querés eliminar "${g?.name}"? Esta acción no se puede deshacer.`;
+    document.getElementById('confirm-delete-group').classList.add('open');
+  },
+  confirmDeleteGroup() {
+    state.groups = state.groups.filter(g => g.id !== state.pendingDeleteGroupId);
+    App.closeConfirm();
+    App.go('groups');
+  },
+
+  shareCode() {
+    const g = state.groups.find(x => x.id === state.activeGroupId);
+    if (!g) return;
+    alert(`Código del grupo "${g.name}":\n\n${g.code}\n\nCompartilo con quien quieras que se una.`);
+  },
+
+  // ── ITEMS ──
+  addItem() {
+    const nameInput  = document.getElementById('add-name');
+    const qtyInput   = document.getElementById('add-qty');
+    const priceInput = document.getElementById('add-price');
+    const errEl      = document.getElementById('add-error');
+
+    const name  = nameInput.value.trim();
+    const qty   = qtyInput.value.trim();
+    const price = parseFloat(priceInput.value) || undefined;
+
+    errEl.style.display = 'none';
+
+    if (!name) {
+      errEl.textContent = 'Escribí el nombre del producto.';
+      errEl.style.display = 'block';
+      return;
+    }
+    const g = state.groups.find(x => x.id === state.activeGroupId);
+    if (!g) return;
+
+    const dup = g.items.some(i => i.name.toLowerCase() === name.toLowerCase());
+    if (dup) {
+      errEl.textContent = `"${name}" ya está en la lista.`;
+      errEl.style.display = 'block';
+      return;
+    }
+
+    g.items.push({ id: uid(), name, qty: qty || '1', price, done: false });
+    nameInput.value = '';
+    qtyInput.value  = '';
+    priceInput.value = '';
+    nameInput.focus();
+    App.renderDetail();
+  },
+
+  toggleItem(itemId) {
+    const g = state.groups.find(x => x.id === state.activeGroupId);
+    if (!g) return;
+    const item = g.items.find(i => i.id === itemId);
+    if (item) { item.done = !item.done; App.renderDetail(); }
+  },
+
+  deleteItem(itemId) {
+    const g = state.groups.find(x => x.id === state.activeGroupId);
+    if (!g) return;
+    g.items = g.items.filter(i => i.id !== itemId);
+    App.renderDetail();
+  },
+
+  setFilter(f, btn) {
+    state.currentFilter = f;
+    state.clearConfirmStep = false;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.className = 'filter-btn off';
+    });
+    btn.className = 'filter-btn on';
+    App.renderItems();
+  },
+
+  clearDone() {
+    const g = state.groups.find(x => x.id === state.activeGroupId);
+    if (!g) return;
+    const cb = document.getElementById('clear-btn');
+    if (!state.clearConfirmStep) {
+      state.clearConfirmStep = true;
+      cb.textContent = '¿Seguro?';
+      cb.classList.add('danger');
+      return;
+    }
+    g.items = g.items.filter(i => !i.done);
+    state.clearConfirmStep = false;
+    cb.textContent = 'Limpiar ✓';
+    cb.classList.remove('danger');
+    state.currentFilter = 'all';
+    document.querySelectorAll('.filter-btn').forEach((b,i) => {
+      b.className = i === 0 ? 'filter-btn on' : 'filter-btn off';
+    });
+    App.renderDetail();
+  },
+
+  // ── RENDER ──
+  renderGroups() {
+    const list  = document.getElementById('groups-list');
+    const empty = document.getElementById('groups-empty');
+    const count = document.getElementById('groups-count');
+    const n     = state.groups.length;
+
+    count.textContent = n === 0 ? 'Sin grupos todavía' :
+      n === 1 ? '1 grupo activo' : `${n} grupos activos`;
+
+    if (n === 0) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = state.groups.map(g => {
+      const pending  = g.items.filter(i => !i.done).length;
+      const done     = g.items.filter(i =>  i.done).length;
+      const metaParts = [];
+      if (pending) metaParts.push(`${pending} pendiente${pending !== 1 ? 's' : ''}`);
+      if (done)    metaParts.push(`${done} comprado${done !== 1 ? 's' : ''}`);
+      if (!g.items.length) metaParts.push('Sin items aún');
+      const pillHtml = pending
+        ? `<div class="pill pill-red">${pending}</div>`
+        : `<div class="pill pill-green">✓</div>`;
+      return `
+        <div class="group-row" onclick="App.openGroup('${g.id}')">
+          <div class="group-avatar">🛒</div>
+          <div style="flex:1;min-width:0">
+            <div class="group-name">${g.name}</div>
+            <div class="group-meta">${metaParts.join(' · ')} · ${g.code}</div>
+          </div>
+          <div class="group-actions" onclick="event.stopPropagation()">
+            ${pillHtml}
+            <button onclick="App.promptDeleteGroup('${g.id}')"
+              style="background:rgba(239,68,68,0.1);border:none;border-radius:8px;
+                     width:34px;height:34px;cursor:pointer;font-size:15px;
+                     color:var(--red);display:flex;align-items:center;justify-content:center;">
+              🗑
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  },
+
+  renderDetail() {
+    const g = state.groups.find(x => x.id === state.activeGroupId);
+    if (!g) return;
+
+    document.getElementById('detail-name').textContent = g.name;
+
+    const pending  = g.items.filter(i => !i.done).length;
+    const done     = g.items.filter(i =>  i.done).length;
+    const metaEl   = document.getElementById('detail-meta');
+    let metaHtml = `<span>Código: <strong style="color:var(--blue);letter-spacing:1px">${g.code}</strong></span>`;
+    metaHtml += `<span>·</span><span>${pending} pendiente${pending !== 1 ? 's' : ''}</span>`;
+    if (done) metaHtml += `<span>·</span><span style="color:var(--green)">${done} comprado${done !== 1 ? 's' : ''}</span>`;
+    metaEl.innerHTML = metaHtml;
+
+    // Total
+    const priced = g.items.filter(i => i.price > 0);
+    const totalEl = document.getElementById('detail-total');
+    if (priced.length) {
+      const total = priced.reduce((s, i) => s + i.price * (parseFloat(i.qty) || 1), 0);
+      const bought = priced.filter(i => i.done).reduce((s, i) => s + i.price * (parseFloat(i.qty) || 1), 0);
+      const fmt = n => n.toLocaleString('es-AR', {style:'currency',currency:'ARS',minimumFractionDigits:0});
+      let inner = `<span style="font-size:12px;color:var(--muted)">Total estimado: <strong style="color:#f9fafb">${fmt(total)}</strong></span>`;
+      if (bought > 0) inner += `<br><span style="font-size:12px;color:var(--green)">Ya compraste: <strong>${fmt(bought)}</strong></span>`;
+      document.getElementById('detail-total-inner').innerHTML = inner;
+      totalEl.style.display = 'flex';
+      totalEl.style.marginBottom = '14px';
+    } else {
+      totalEl.style.display = 'none';
+    }
+
+    // Clear btn
+    const cb = document.getElementById('clear-btn');
+    if (cb) {
+      cb.style.display = done > 0 ? '' : 'none';
+      if (!state.clearConfirmStep) { cb.textContent = 'Limpiar ✓'; cb.classList.remove('danger'); }
+    }
+
+    App.renderItems();
+  },
+
+  renderItems() {
+    const g = state.groups.find(x => x.id === state.activeGroupId);
+    const container = document.getElementById('item-list');
+    if (!g) { container.innerHTML = ''; return; }
+
+    let items = g.items;
+    if (state.currentFilter === 'pending') items = items.filter(i => !i.done);
+    if (state.currentFilter === 'done')    items = items.filter(i =>  i.done);
+
+    if (!items.length) {
+      const msgs = {
+        all: 'La lista está vacía · agregá un producto arriba',
+        pending: '¡Todo comprado! 🎉',
+        done: 'Todavía no compraste nada',
+      };
+      container.innerHTML = `<div class="empty-state">${msgs[state.currentFilter]}</div>`;
+      return;
+    }
+
+    const fmt = p => p.toLocaleString('es-AR', {style:'currency',currency:'ARS',minimumFractionDigits:0});
+    container.innerHTML = items.map(item => {
+      const priceHtml = item.price > 0
+        ? `<span class="price-chip">💰 ${fmt(item.price)}</span>`
+        : `<button class="no-price-btn" onclick="event.stopPropagation()">+ agregar precio</button>`;
+      return `
+        <div class="item-wrap" id="iw-${item.id}">
+          <div class="item-bg-delete" onclick="App.deleteItem('${item.id}')">🗑️</div>
+          <div class="item-card ${item.done ? 'done' : ''}"
+               data-id="${item.id}"
+               ontouchstart="Swipe.start(event,'${item.id}')"
+               ontouchmove="Swipe.move(event,'${item.id}')"
+               ontouchend="Swipe.end('${item.id}')">
+            <button class="circle-btn ${item.done ? 'checked' : ''}" onclick="App.toggleItem('${item.id}')">
+              ${item.done ? '✓' : ''}
+            </button>
+            <div style="flex:1;min-width:0">
+              <div class="item-name-text ${item.done ? 'crossed' : ''}">${item.name}</div>
+              <div class="item-sub-text">${item.qty} · Valen</div>
+              ${priceHtml}
+            </div>
+            <button class="item-x-btn" onclick="App.deleteItem('${item.id}')">✕</button>
+          </div>
+        </div>`;
+    }).join('');
+  },
+
+  renderProfile() {
+    const totalItems = state.groups.reduce((s,g) => s + g.items.length, 0);
+    const totalDone  = state.groups.reduce((s,g) => s + g.items.filter(i => i.done).length, 0);
+    document.getElementById('stat-groups').textContent = state.groups.length;
+    document.getElementById('stat-items').textContent  = totalItems;
+    document.getElementById('stat-done').textContent   = totalDone;
+  },
+};
+
+// ════════════════════════════════════════
+//  SWIPE TO DELETE
+// ════════════════════════════════════════
+const Swipe = {
+  data: {},
+  start(e, id) {
+    this.data[id] = { x: e.touches[0].clientX, offset: 0, swiped: false };
+  },
+  move(e, id) {
+    if (!this.data[id]) return;
+    const dx = e.touches[0].clientX - this.data[id].x;
+    if (dx >= 0) return;
+    const offset = Math.max(dx, -76);
+    this.data[id].offset = offset;
+    const card = document.querySelector(`#iw-${id} .item-card`);
+    if (card) { card.style.transition = 'none'; card.style.transform = `translateX(${offset}px)`; }
+  },
+  end(id) {
+    if (!this.data[id]) return;
+    const card = document.querySelector(`#iw-${id} .item-card`);
+    if (!card) return;
+    card.style.transition = 'transform 220ms ease';
+    if (this.data[id].offset < -40) {
+      card.style.transform = 'translateX(-76px)';
+      this.data[id].swiped = true;
+    } else {
+      card.style.transform = 'translateX(0)';
+      this.data[id].swiped = false;
+    }
+  },
+};
+
+// Tap to close swipe
+document.addEventListener('click', e => {
+  Object.keys(Swipe.data).forEach(id => {
+    if (!Swipe.data[id]?.swiped) return;
+    const card = document.querySelector(`#iw-${id} .item-card`);
+    if (card && !card.contains(e.target)) {
+      card.style.transition = 'transform 220ms ease';
+      card.style.transform = 'translateX(0)';
+      Swipe.data[id].swiped = false;
+    }
+  });
+});
+
+// Enter key en add-name
+document.getElementById('add-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') App.addItem();
+});
+document.getElementById('create-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') App.createGroup();
+});
+document.getElementById('join-code').addEventListener('keydown', e => {
+  if (e.key === 'Enter') App.joinGroup();
+});
+</script>
+</body>
+</html>

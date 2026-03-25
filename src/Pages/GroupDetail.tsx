@@ -4,6 +4,7 @@ import { useGroups } from "../context/GroupsContext";
 import type { GroupType, ShoppingItemType } from "../types";
 import AddItemForm from "../componentes/AddItemFor";
 import ItemCard from "../componentes/ItemCard";
+import ItemDetailModal from "../componentes/ItemDetailModal";
 
 type FilterType = "all" | "pending" | "purchased";
 
@@ -24,38 +25,69 @@ export default function GroupDetail() {
   const {
     myGroups, isLoading,
     addItemToGroup, toggleItemPurchased, deleteItemFromGroup,
-    updateItemQuantity, updateItemName, updateItemPrice, clearPurchasedItems,
+    updateItemQuantity, updateItemName, updateItemPrice, updateItemNotes, clearPurchasedItems,
   } = useGroups();
+
   const [filter, setFilter] = useState<FilterType>("all");
+  const [storeFilter, setStoreFilter] = useState<string>("all");
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [detailItemId, setDetailItemId] = useState<string | null>(null);
 
   const group = useMemo(() => myGroups.find((g: GroupType) => g.id === id), [myGroups, id]);
 
+  const detailItem = useMemo(
+    () => (detailItemId ? group?.items.find((i) => i.id === detailItemId) ?? null : null),
+    [detailItemId, group]
+  );
+
+  // Tiendas únicas presentes en los items del grupo
+  const availableStores = useMemo(() => {
+    if (!group) return [];
+    const stores = group.items.map((i) => i.store).filter(Boolean) as string[];
+    return [...new Set(stores)];
+  }, [group]);
+
   const filteredItems = useMemo(() => {
     if (!group) return [];
-    if (filter === "pending") return group.items.filter((i: ShoppingItemType) => !i.purchased);
-    if (filter === "purchased") return group.items.filter((i: ShoppingItemType) => i.purchased);
-    return group.items;
-  }, [group, filter]);
+    let items = group.items;
+    if (filter === "pending") items = items.filter((i) => !i.purchased);
+    else if (filter === "purchased") items = items.filter((i) => i.purchased);
+    if (storeFilter !== "all") items = items.filter((i) => (i.store ?? "") === storeFilter);
+    return items;
+  }, [group, filter, storeFilter]);
 
   const pendingCount = useMemo(() => group ? group.items.filter((i) => !i.purchased).length : 0, [group]);
   const purchasedCount = useMemo(() => group ? group.items.filter((i) => i.purchased).length : 0, [group]);
+
+  const itemTotal = (item: ShoppingItemType) => {
+    if (!item.price || item.price <= 0) return 0;
+    if (item.priceMode === "total") return item.price;
+    return item.price * (parseFloat(item.quantity) || 1);
+  };
 
   const totalEstimado = useMemo(() => {
     if (!group) return null;
     const priced = group.items.filter((i) => i.price !== undefined && i.price > 0);
     if (!priced.length) return null;
-    return priced.reduce((acc, item) => acc + (item.price ?? 0) * (parseFloat(item.quantity) || 1), 0);
+    return priced.reduce((acc, item) => acc + itemTotal(item), 0);
   }, [group]);
 
   const totalComprado = useMemo(() => {
     if (!group) return null;
     const priced = group.items.filter((i) => i.purchased && i.price !== undefined && i.price > 0);
     if (!priced.length) return null;
-    return priced.reduce((acc, item) => acc + (item.price ?? 0) * (parseFloat(item.quantity) || 1), 0);
+    return priced.reduce((acc, item) => acc + itemTotal(item), 0);
   }, [group]);
 
   const fmt = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 });
+
+  // Nombres de miembros desde memberNames o fallback al count
+  const memberNamesDisplay = useMemo(() => {
+    if (!group) return null;
+    const names = group.memberNames ? Object.values(group.memberNames) : [];
+    if (names.length === 0) return `${group.members.length} miembro${group.members.length !== 1 ? "s" : ""}`;
+    return names.join(", ");
+  }, [group]);
 
   const handleClearPurchased = async () => {
     if (!clearConfirm) { setClearConfirm(true); return; }
@@ -93,6 +125,14 @@ export default function GroupDetail() {
         .filter-btn.active { background: #f9fafb; color: #0b0f19; }
         .filter-btn.inactive { background: #111827; color: #6b7280; border: 1px solid #1f2937; }
         .filter-btn.inactive:active { background: #161e2e; color: #f9fafb; }
+        .store-chip {
+          padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+          cursor: pointer; border: 1px solid; white-space: nowrap;
+          -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+          transition: all 150ms ease; flex-shrink: 0;
+        }
+        .store-chip.active { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
+        .store-chip.inactive { background: transparent; color: #6b7280; border-color: #1f2937; }
         .back-btn {
           background: none; border: none; cursor: pointer; font-size: 13px;
           color: #4b5563; padding: 0; display: flex; align-items: center; gap: 6px;
@@ -144,6 +184,13 @@ export default function GroupDetail() {
                 <span style={{ fontSize: "12px", color: "#10b981" }}>{purchasedCount} comprado{purchasedCount !== 1 ? "s" : ""}</span>
               </>}
             </div>
+
+            {/* Miembros */}
+            {memberNamesDisplay && (
+              <p style={{ fontSize: "12px", color: "#4b5563", margin: "6px 0 0", lineHeight: 1.4 }}>
+                👥 {memberNamesDisplay}
+              </p>
+            )}
           </div>
 
           {/* Total estimado */}
@@ -167,14 +214,14 @@ export default function GroupDetail() {
 
           {/* Agregar item */}
           <AddItemForm
-            onAdd={async (name, quantity, price) => {
+            onAdd={async (name, quantity, price, store, imageUrl, priceMode, notes) => {
               const exists = group.items.some((item) => item.name.toLowerCase() === name.toLowerCase());
               if (exists) throw new Error(`"${name}" ya está en la lista`);
-              await addItemToGroup(group.id, name, quantity, price);
+              await addItemToGroup(group.id, name, quantity, price, store, imageUrl, priceMode, notes);
             }}
           />
 
-          {/* Filtros + limpiar */}
+          {/* Filtro por estado */}
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <div style={{ display: "flex", gap: "6px", flex: 1 }}>
               {(["all", "pending", "purchased"] as FilterType[]).map((f) => (
@@ -191,12 +238,34 @@ export default function GroupDetail() {
             )}
           </div>
 
+          {/* Filtro por tienda — solo si hay tiendas */}
+          {availableStores.length > 0 && (
+            <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" }}>
+              <button
+                className={`store-chip ${storeFilter === "all" ? "active" : "inactive"}`}
+                onClick={() => setStoreFilter("all")}
+              >
+                Todas
+              </button>
+              {availableStores.map((s) => (
+                <button
+                  key={s}
+                  className={`store-chip ${storeFilter === s ? "active" : "inactive"}`}
+                  onClick={() => setStoreFilter(s)}
+                >
+                  🛒 {s}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Items */}
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {filteredItems.length === 0 ? (
               <div style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: "14px", padding: "36px", textAlign: "center" }}>
                 <p style={{ color: "#4b5563", fontSize: "14px", margin: 0 }}>
-                  {filter === "all" ? "Lista vacía · agregá un producto arriba" :
+                  {storeFilter !== "all" ? `Sin productos de ${storeFilter} en este filtro` :
+                    filter === "all" ? "Lista vacía · agregá un producto arriba" :
                     filter === "pending" ? "¡Todo comprado! 🎉" : "Todavía no compraste nada"}
                 </p>
               </div>
@@ -210,7 +279,8 @@ export default function GroupDetail() {
                   onDelete={() => deleteItemFromGroup(group.id, item.id)}
                   onUpdateName={(name) => updateItemName(group.id, item.id, name)}
                   onUpdateQuantity={(quantity) => updateItemQuantity(group.id, item.id, quantity)}
-                  onUpdatePrice={(price) => updateItemPrice(group.id, item.id, price)}
+                  onUpdatePrice={(price, priceMode) => updateItemPrice(group.id, item.id, price, priceMode)}
+                  onOpenDetail={() => setDetailItemId(item.id)}
                 />
               ))
             )}
@@ -218,6 +288,15 @@ export default function GroupDetail() {
 
         </div>
       </main>
+
+      {/* Modal de detalle */}
+      {detailItem && (
+        <ItemDetailModal
+          item={detailItem}
+          onClose={() => setDetailItemId(null)}
+          onUpdateNotes={(notes) => updateItemNotes(group.id, detailItem.id, notes)}
+        />
+      )}
     </>
   );
 }

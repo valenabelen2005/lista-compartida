@@ -21,6 +21,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "./AuthContext";
+import { useNotifications } from "./NotificationContext";
 import type { GroupType, ShoppingItemType } from "../types";
 
 const GUEST_GROUPS_KEY = "lista-compartida-guest-groups";
@@ -49,12 +50,15 @@ interface GroupsContextType {
   joinGroup: (code: string) => Promise<string | null>;
   leaveGroup: (groupId: string) => Promise<void>;
   deleteGroup: (groupId: string) => Promise<void>;
-  addItemToGroup: (groupId: string, itemName: string, quantity: string, price?: number) => Promise<void>;
+  addItemToGroup: (groupId: string, itemName: string, quantity: string, price?: number, store?: string, imageUrl?: string, priceMode?: "total" | "unit", notes?: string) => Promise<void>;
+  updateItemNotes: (groupId: string, itemId: string, notes: string | undefined) => Promise<void>;
   toggleItemPurchased: (groupId: string, itemId: string) => Promise<void>;
   deleteItemFromGroup: (groupId: string, itemId: string) => Promise<void>;
   updateItemQuantity: (groupId: string, itemId: string, quantity: string) => Promise<void>;
   updateItemName: (groupId: string, itemId: string, name: string) => Promise<void>;
-  updateItemPrice: (groupId: string, itemId: string, price: number | undefined) => Promise<void>;
+  updateItemPrice: (groupId: string, itemId: string, price: number | undefined, priceMode: "total" | "unit") => Promise<void>;
+  updateItemStore: (groupId: string, itemId: string, store: string | undefined) => Promise<void>;
+  updateItemImage: (groupId: string, itemId: string, imageUrl: string | undefined) => Promise<void>;
   clearPurchasedItems: (groupId: string) => Promise<void>;
 }
 
@@ -68,6 +72,7 @@ export function useGroups(): GroupsContextType {
 
 export function GroupsProvider({ children }: { children: ReactNode }) {
   const { user, isGuest } = useAuth();
+  const { showNotification } = useNotifications();
   const [allGroups, setAllGroups] = useState<GroupType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -135,6 +140,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
             createdAt: d.createdAt ?? 0,
             createdBy: d.createdBy ?? "",
             members: d.members ?? [],
+            memberNames: d.memberNames ?? {},
             items: (d.items ?? []) as ShoppingItemType[],
           };
         });
@@ -188,6 +194,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         createdAt: Date.now(),
         createdBy: user.uid,
         members: [user.uid],
+        memberNames: { [user.uid]: user.displayName ?? "Usuario" },
         items: [],
       });
     },
@@ -196,7 +203,6 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
 
   const joinGroup = useCallback(
     async (code: string): Promise<string | null> => {
-      // En modo invitado no se puede unir a grupos de otros
       if (isGuest) return "GUEST_CANNOT_JOIN";
       if (!user) return null;
       const upperCode = code.trim().toUpperCase();
@@ -207,14 +213,17 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         const groupDoc = snapshot.docs[0];
         await updateDoc(doc(db, "groups", groupDoc.id), {
           members: arrayUnion(user.uid),
+          [`memberNames.${user.uid}`]: user.displayName ?? "Usuario",
         });
+        const groupName = groupDoc.data().name ?? "grupo";
+        showNotification("group_joined", `Te uniste a "${groupName}"`);
         return groupDoc.id;
       } catch (error) {
         console.error("Error en joinGroup:", error);
         return null;
       }
     },
-    [user, isGuest]
+    [user, isGuest, showNotification]
   );
 
   const leaveGroup = useCallback(
@@ -242,13 +251,23 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
       if (!user) return;
       const group = allGroups.find((g) => g.id === groupId);
       if (!group || group.createdBy !== user.uid) return;
-      await deleteDoc(doc(db, "groups", groupId));
+
+      const remainingMembers = group.members.filter((id: string) => id !== user.uid);
+      if (remainingMembers.length > 0) {
+        // Hay otros miembros: solo salir, no borrar para todos
+        await updateDoc(doc(db, "groups", groupId), {
+          members: remainingMembers,
+        });
+      } else {
+        // Último miembro: borrar el grupo
+        await deleteDoc(doc(db, "groups", groupId));
+      }
     },
     [user, isGuest, allGroups, updateGuestGroups]
   );
 
   const addItemToGroup = useCallback(
-    async (groupId: string, itemName: string, quantity: string, price?: number) => {
+    async (groupId: string, itemName: string, quantity: string, price?: number, store?: string, imageUrl?: string, priceMode?: "total" | "unit", notes?: string) => {
       const groups = isGuest ? guestGroups : allGroups;
       const group = groups.find((g) => g.id === groupId);
       if (!group) return;
@@ -261,7 +280,10 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         name: itemName,
         quantity,
-        ...(price !== undefined && price > 0 ? { price } : {}),
+        ...(price !== undefined && price > 0 ? { price, priceMode: priceMode ?? "unit" } : {}),
+        ...(store ? { store } : {}),
+        ...(imageUrl ? { imageUrl } : {}),
+        ...(notes ? { notes } : {}),
         purchased: false,
         addedBy: user?.uid ?? "guest",
         addedByName: user?.displayName ?? "Vos",
@@ -269,13 +291,15 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
 
       if (isGuest) {
         updateGuestGroupItems(groupId, (items) => [...items, newItem]);
+        showNotification("item_added", itemName);
         return;
       }
       await updateDoc(doc(db, "groups", groupId), {
         items: [...group.items, newItem],
       });
+      showNotification("item_added", itemName);
     },
-    [allGroups, guestGroups, user, isGuest, updateGuestGroupItems]
+    [allGroups, guestGroups, user, isGuest, updateGuestGroupItems, showNotification]
   );
 
   const updateItemName = useCallback(
@@ -297,35 +321,32 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
 
   const toggleItemPurchased = useCallback(
     async (groupId: string, itemId: string) => {
+      const toggleItem = (i: ShoppingItemType) => {
+        if (i.id !== itemId) return i;
+        if (!i.purchased) {
+          return { ...i, purchased: true, purchasedAt: Date.now() };
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { purchasedAt: _removed, ...rest } = i;
+        return { ...rest, purchased: false };
+      };
+
       if (isGuest) {
-        updateGuestGroupItems(groupId, (items) =>
-          items.map((item) =>
-            item.id === itemId
-              ? {
-                  ...item,
-                  purchased: !item.purchased,
-                  purchasedAt: !item.purchased ? Date.now() : undefined,
-                }
-              : item
-          )
-        );
+        const group = guestGroups.find((g) => g.id === groupId);
+        const item = group?.items.find((i) => i.id === itemId);
+        updateGuestGroupItems(groupId, (items) => items.map(toggleItem));
+        if (item && !item.purchased) showNotification("item_purchased", item.name);
         return;
       }
       const group = allGroups.find((g) => g.id === groupId);
       if (!group) return;
+      const item = group.items.find((i) => i.id === itemId);
       await updateDoc(doc(db, "groups", groupId), {
-        items: group.items.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                purchased: !item.purchased,
-                purchasedAt: !item.purchased ? Date.now() : undefined,
-              }
-            : item
-        ),
+        items: group.items.map(toggleItem),
       });
+      if (item && !item.purchased) showNotification("item_purchased", item.name);
     },
-    [allGroups, isGuest, updateGuestGroupItems]
+    [allGroups, guestGroups, isGuest, updateGuestGroupItems, showNotification]
   );
 
   const deleteItemFromGroup = useCallback(
@@ -361,17 +382,51 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
   );
 
   const updateItemPrice = useCallback(
-    async (groupId: string, itemId: string, price: number | undefined) => {
+    async (groupId: string, itemId: string, price: number | undefined, priceMode: "total" | "unit") => {
       if (isGuest) {
         updateGuestGroupItems(groupId, (items) =>
-          items.map((item) => (item.id === itemId ? { ...item, price } : item))
+          items.map((item) => (item.id === itemId ? { ...item, price, priceMode } : item))
         );
         return;
       }
       const group = allGroups.find((g) => g.id === groupId);
       if (!group) return;
       await updateDoc(doc(db, "groups", groupId), {
-        items: group.items.map((item) => (item.id === itemId ? { ...item, price } : item)),
+        items: group.items.map((item) => (item.id === itemId ? { ...item, price, priceMode } : item)),
+      });
+    },
+    [allGroups, isGuest, updateGuestGroupItems]
+  );
+
+  const updateItemStore = useCallback(
+    async (groupId: string, itemId: string, store: string | undefined) => {
+      if (isGuest) {
+        updateGuestGroupItems(groupId, (items) =>
+          items.map((item) => (item.id === itemId ? { ...item, store } : item))
+        );
+        return;
+      }
+      const group = allGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      await updateDoc(doc(db, "groups", groupId), {
+        items: group.items.map((item) => (item.id === itemId ? { ...item, store } : item)),
+      });
+    },
+    [allGroups, isGuest, updateGuestGroupItems]
+  );
+
+  const updateItemImage = useCallback(
+    async (groupId: string, itemId: string, imageUrl: string | undefined) => {
+      if (isGuest) {
+        updateGuestGroupItems(groupId, (items) =>
+          items.map((item) => (item.id === itemId ? { ...item, imageUrl } : item))
+        );
+        return;
+      }
+      const group = allGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      await updateDoc(doc(db, "groups", groupId), {
+        items: group.items.map((item) => (item.id === itemId ? { ...item, imageUrl } : item)),
       });
     },
     [allGroups, isGuest, updateGuestGroupItems]
@@ -392,6 +447,23 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
     [allGroups, isGuest, updateGuestGroupItems]
   );
 
+  const updateItemNotes = useCallback(
+    async (groupId: string, itemId: string, notes: string | undefined) => {
+      if (isGuest) {
+        updateGuestGroupItems(groupId, (items) =>
+          items.map((item) => (item.id === itemId ? { ...item, notes } : item))
+        );
+        return;
+      }
+      const group = allGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      await updateDoc(doc(db, "groups", groupId), {
+        items: group.items.map((item) => (item.id === itemId ? { ...item, notes } : item)),
+      });
+    },
+    [allGroups, isGuest, updateGuestGroupItems]
+  );
+
   return (
     <GroupsContext.Provider
       value={{
@@ -407,6 +479,9 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         updateItemQuantity,
         updateItemName,
         updateItemPrice,
+        updateItemStore,
+        updateItemImage,
+        updateItemNotes,
         clearPurchasedItems,
       }}
     >

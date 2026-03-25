@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import LoginPage from "./Pages/LoginPage";
+import ToastContainer from "./componentes/ToastContainer";
 
 // Lazy loading: cada ruta carga su chunk solo cuando se necesita
 // → bundle inicial más pequeño → primera carga más rápida en Android
@@ -29,6 +30,8 @@ function App() {
   if (!user && !isGuest) return <LoginPage />;
 
   return (
+    <>
+    <ToastContainer />
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<Home />} />
@@ -40,6 +43,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Suspense>
+    </>
   );
 }
 

@@ -7,8 +7,11 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     setLoading(true);
-    await loginWithGoogle();
-    setLoading(false);
+    try {
+      await loginWithGoogle();
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

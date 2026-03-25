@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Lista Compartida</string>
+    <string name="title_activity_main">Lista Compartida</string>
+    <string name="package_name">com.listacompartida.app</string>
+    <string name="custom_url_scheme">com.listacompartida.app</string>
+</resources>

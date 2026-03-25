@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Lista Compartida - Preview</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0f19; }
+    input, button { font-family: inherit; }
+    input:focus, button:focus { outline: none; }
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useContext, useCallback, createContext } = React;
+
+const GUEST_GROUPS_KEY = "lista-compartida-guest-groups";
+const GUEST_MODE_KEY   = "lista-guest-mode";
+const genId   = () => `local-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
+const genCode = () => Math.random().toString(36).substring(2,8).toUpperCase();
+const loadGroups = () => { try { return JSON.parse(localStorage.getItem(GUEST_GROUPS_KEY)||"[]"); } catch { return []; } };
+const saveGroups = g => localStorage.setItem(GUEST_GROUPS_KEY, JSON.stringify(g));
+const fmt = n => n.toLocaleString("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:0});
+
+const AuthCtx   = createContext();
+const GroupsCtx = createContext();
+
+function AuthProvider({children}) {
+  const [isGuest, setIsGuest] = useState(()=>localStorage.getItem(GUEST_MODE_KEY)==="true");
+  const [user, setUser]       = useState(null);
+  const [loginLoading, setLL] = useState(false);
+  const enterAsGuest = () => { localStorage.setItem(GUEST_MODE_KEY,"true"); setIsGuest(true); };
+  const loginWithGoogle = async () => {
+    setLL(true);
+    await new Promise(r=>setTimeout(r,900));
+    setUser({uid:"g1",displayName:"Valen",email:"valen@gmail.com"});
+    localStorage.removeItem(GUEST_MODE_KEY);
+    setIsGuest(false);
+    setLL(false);
+  };
+  const logout = () => { if(isGuest){localStorage.removeItem(GUEST_MODE_KEY);setIsGuest(false);}else{setUser(null);} };
+  return <AuthCtx.Provider value={{user,isGuest,loginWithGoogle,enterAsGuest,logout,loginLoading}}>{children}</AuthCtx.Provider>;
+}
+
+function GroupsProvider({children}) {
+  const {user} = useContext(AuthCtx);
+  const [groups, setGroups] = useState(loadGroups);
+  const upd  = useCallback(fn=>setGroups(p=>{const n=fn(p);saveGroups(n);return n;}),[]);
+  const updI = useCallback((gid,fn)=>upd(p=>p.map(g=>g.id===gid?{...g,items:fn(g.items)}:g)),[upd]);
+  const addGroup    = async name => upd(p=>[...p,{id:genId(),name,code:genCode(),createdAt:Date.now(),createdBy:"guest",members:["guest"],items:[]}]);
+  const deleteGroup = async gid  => upd(p=>p.filter(g=>g.id!==gid));
+  const joinGroup   = async code => { const f=groups.find(g=>g.code===code.trim().toUpperCase()); return f?f.id:null; };
+  const addItem = async (gid,name,qty,price) => {
+    const g=groups.find(g=>g.id===gid); if(!g) return;
+    if(g.items.some(i=>i.name.toLowerCase()===name.toLowerCase())) throw new Error(`"${name}" ya está en la lista`);
+    updI(gid,items=>[...items,{id:genId(),name,quantity:qty,price:price>0?price:undefined,purchased:false,addedByName:user?.displayName??"Vos"}]);
+  };
+  const toggleItem  = async (gid,iid) => updI(gid,items=>items.map(i=>i.id===iid?{...i,purchased:!i.purchased}:i));
+  const deleteItem  = async (gid,iid) => updI(gid,items=>items.filter(i=>i.id!==iid));
+  const updateName  = async (gid,iid,name)     => updI(gid,items=>items.map(i=>i.id===iid?{...i,name}:i));
+  const updateQty   = async (gid,iid,quantity) => updI(gid,items=>items.map(i=>i.id===iid?{...i,quantity}:i));
+  const updatePrice = async (gid,iid,price)    => updI(gid,items=>items.map(i=>i.id===iid?{...i,price}:i));
+  const clearBought = async gid => updI(gid,items=>items.filter(i=>!i.purchased));
+  return <GroupsCtx.Provider value={{groups,addGroup,deleteGroup,joinGroup,addItem,toggleItem,deleteItem,updateName,updateQty,updatePrice,clearBought}}>{children}</GroupsCtx.Provider>;
+}
+
+const S = {
+  page:   {minHeight:"100vh",background:"#0b0f19",backgroundImage:"radial-gradient(ellipse 120% 60% at 50% -5%,rgba(59,130,246,0.18),transparent)"},
+  center: {display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"},
+  card:   {background:"#111827",border:"1px solid #1f2937",borderRadius:"16px",padding:"20px"},
+  input:  {background:"#0b0f19",border:"1px solid #1f2937",borderRadius:"8px",padding:"12px 14px",fontSize:"14px",color:"#f9fafb",width:"100%",boxSizing:"border-box"},
+  prim:   {width:"100%",padding:"13px 16px",borderRadius:"10px",fontSize:"14px",fontWeight:500,cursor:"pointer",background:"#3b82f6",color:"#fff",border:"none"},
+  ghost:  {width:"100%",padding:"13px 16px",borderRadius:"10px",fontSize:"14px",fontWeight:500,cursor:"pointer",background:"transparent",color:"#f9fafb",border:"1px solid #1f2937"},
+  neut:   {width:"100%",padding:"13px 16px",borderRadius:"10px",fontSize:"14px",fontWeight:500,cursor:"pointer",background:"#161e2e",color:"#f9fafb",border:"none"},
+  back:   {background:"none",border:"none",cursor:"pointer",fontSize:"16px",color:"#9ca3af",padding:0,textAlign:"left",minHeight:"44px",display:"flex",alignItems:"center"},
+  banner: {background:"rgba(59,130,246,0.07)",border:"1px solid rgba(59,130,246,0.18)",borderRadius:"12px",padding:"14px 16px",display:"flex",flexDirection:"column",gap:"10px"},
+};
+const Logo = () => (
+  <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"4px"}}>
+    <div style={{width:"34px",height:"34px",borderRadius:"9px",background:"rgba(59,130,246,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"17px"}}>🛒</div>
+    <span style={{fontSize:"11px",fontWeight:600,color:"#3b82f6",letterSpacing:"1px",textTransform:"uppercase"}}>Lista Compartida</span>
+  </div>
+);
+const GuestBtn = ({onClick,loading}) => (
+  <button onClick={onClick} disabled={loading} style={{background:"#3b82f6",color:"#fff",border:"none",borderRadius:"8px",padding:"9px 14px",fontSize:"13px",fontWeight:500,cursor:"pointer",opacity:loading?0.6:1}}>
+    {loading?"Iniciando…":"Iniciar sesión con Google →"}
+  </button>
+);
+
+// ---- ITEM CARD (edición inline) ----
+function ItemCard({item,groupId}) {
+  const {toggleItem,deleteItem,updateName,updateQty,updatePrice} = useContext(GroupsCtx);
+  const [editing,setEditing] = useState(null);
+  const [val,setVal]         = useState("");
+  const start = field => { setEditing(field); setVal(field==="name"?item.name:field==="quantity"?item.quantity:item.price!=null?String(item.price):""); };
+  const save  = async () => {
+    if(editing==="name"&&val.trim()) await updateName(groupId,item.id,val.trim());
+    if(editing==="quantity") await updateQty(groupId,item.id,val.trim()||"1");
+    if(editing==="price"){const p=parseFloat(val.replace(",","."));await updatePrice(groupId,item.id,isNaN(p)||p<=0?undefined:p);}
+    setEditing(null);
+  };
+  const ERow = ({type="text",ph=""}) => (
+    <div style={{display:"flex",gap:"6px",alignItems:"center",flex:1}}>
+      <input type={type} inputMode={type==="number"?"decimal":"text"} value={val} placeholder={ph}
+        onChange={e=>setVal(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter")save();if(e.key==="Escape")setEditing(null);}}
+        autoFocus
+        style={{background:"#0b0f19",border:"1px solid #3b82f6",borderRadius:"8px",padding:"8px 10px",fontSize:"14px",color:"#f9fafb",flex:1,minWidth:0}}
+      />
+      <button onClick={save} style={{minWidth:"36px",minHeight:"36px",borderRadius:"8px",background:"rgba(16,185,129,0.15)",color:"#10b981",border:"1px solid rgba(16,185,129,0.2)",cursor:"pointer"}}>✓</button>
+      <button onClick={()=>setEditing(null)} style={{minWidth:"36px",minHeight:"36px",borderRadius:"8px",background:"transparent",color:"#6b7280",border:"1px solid #1f2937",cursor:"pointer"}}>✕</button>
+    </div>
+  );
+  return (
+    <div style={{background:"#111827",border:"1px solid #1f2937",borderRadius:"14px",padding:"14px 16px",display:"flex",alignItems:"center",gap:"12px",opacity:item.purchased?0.5:1,transition:"opacity 200ms"}}>
+      <div onClick={()=>!editing&&toggleItem(groupId,item.id)} style={{width:"22px",height:"22px",borderRadius:"6px",border:item.purchased?"2px solid #10b981":"2px solid #374151",background:item.purchased?"#10b981":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,transition:"all 150ms"}}>
+        {item.purchased&&<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+      </div>
+      <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:"5px"}}>
+        {editing==="name"?<ERow type="text" ph="Nombre del producto"/>:(
+          <button onClick={()=>start("name")} style={{background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left",display:"flex",alignItems:"center",gap:"5px"}}>
+            <span style={{fontSize:"14px",fontWeight:500,color:item.purchased?"#4b5563":"#f9fafb",textDecoration:item.purchased?"line-through":"none"}}>{item.name}</span>
+            <span style={{fontSize:"11px",color:"#374151",opacity:0.7}}>✏️</span>
+          </button>
+        )}
+        {editing==="quantity"?<ERow type="text" ph="Cantidad"/>:editing==="price"?<ERow type="number" ph="Precio"/>:(
+          <div style={{display:"flex",gap:"6px",flexWrap:"wrap",alignItems:"center"}}>
+            <button onClick={()=>start("quantity")} style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:"3px"}}>
+              <span style={{fontSize:"12px",color:"#6b7280"}}>x{item.quantity}</span><span style={{fontSize:"10px",color:"#374151"}}>✏️</span>
+            </button>
+            <span style={{fontSize:"12px",color:"#374151"}}>·</span>
+            {item.price>0?(
+              <button onClick={()=>start("price")} style={{display:"inline-flex",alignItems:"center",gap:"3px",background:"rgba(16,185,129,0.08)",border:"1px solid rgba(16,185,129,0.2)",borderRadius:"6px",padding:"2px 7px",cursor:"pointer"}}>
+                <span style={{fontSize:"11px",color:"#10b981"}}>💰 {fmt(item.price)}</span><span style={{fontSize:"10px",color:"rgba(16,185,129,0.6)"}}>✏️</span>
+              </button>
+            ):(
+              <button onClick={()=>start("price")} style={{background:"none",border:"1px dashed #1f2937",borderRadius:"6px",padding:"2px 7px",cursor:"pointer",fontSize:"11px",color:"#374151"}}>+ precio</button>
+            )}
+            <span style={{fontSize:"12px",color:"#374151"}}>· {item.addedByName}</span>
+          </div>
+        )}
+      </div>
+      {!editing&&<button onClick={()=>deleteItem(groupId,item.id)} style={{width:"36px",height:"36px",borderRadius:"8px",background:"transparent",border:"none",color:"#374151",cursor:"pointer",fontSize:"16px",flexShrink:0}}>✕</button>}
+    </div>
+  );
+}
+
+// ---- LOGIN ----
+function LoginPage() {
+  const {loginWithGoogle,enterAsGuest,loginLoading} = useContext(AuthCtx);
+  const [loc,setLoc] = useState(false);
+  const go = async()=>{setLoc(true);await loginWithGoogle();setLoc(false);};
+  const loading=loginLoading||loc;
+  return (
+    <main style={{...S.page,...S.center}}>
+      <div style={{width:"100%",maxWidth:"360px",display:"flex",flexDirection:"column",gap:"28px"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+          <Logo/>
+          <h1 style={{fontSize:"30px",fontWeight:700,color:"#f9fafb",lineHeight:1.2,letterSpacing:"-0.5px"}}>Bienvenido</h1>
+          <p style={{fontSize:"15px",color:"#9ca3af",marginTop:"4px"}}>Elegí cómo querés usar la app</p>
+        </div>
+        <div style={{...S.card,display:"flex",flexDirection:"column",gap:"14px"}}>
+          <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+            <button onClick={go} disabled={loading} style={{width:"100%",minHeight:"50px",padding:"0 16px",borderRadius:"12px",fontSize:"15px",fontWeight:500,cursor:loading?"default":"pointer",background:"#f9fafb",color:"#0b0f19",border:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",opacity:loading?0.7:1}}>
+              {loading?<span style={{fontSize:"14px",color:"#6b7280"}}>Iniciando sesión…</span>:<>
+                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                Continuar con Google
+              </>}
+            </button>
+            <p style={{fontSize:"12px",color:"#4b5563",textAlign:"center",lineHeight:1.4}}>Tus grupos se sincronizan en todos tus dispositivos</p>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}><div style={{flex:1,height:"1px",background:"#1f2937"}}/><span style={{fontSize:"12px",color:"#374151"}}>o mejor</span><div style={{flex:1,height:"1px",background:"#1f2937"}}/></div>
+          <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+            <button onClick={enterAsGuest} style={{width:"100%",minHeight:"50px",padding:"0 16px",borderRadius:"12px",fontSize:"15px",fontWeight:500,cursor:"pointer",background:"transparent",color:"#f9fafb",border:"1px solid #1f2937",display:"flex",alignItems:"center",justifyContent:"center",gap:"10px"}}>
+              👤 Entrar sin registrarse
+            </button>
+            <p style={{fontSize:"12px",color:"#4b5563",textAlign:"center",lineHeight:1.4}}>Los grupos se guardan solo en este dispositivo</p>
+          </div>
+        </div>
+        <p style={{fontSize:"12px",color:"#374151",textAlign:"center"}}>Al continuar aceptás usar esto para organizar tus compras.</p>
+      </div>
+    </main>
+  );
+}
+
+// ---- HOME ----
+function HomePage({nav}) {
+  const {user,isGuest,loginWithGoogle}=useContext(AuthCtx);
+  const [ll,setLl]=useState(false);
+  const doLogin=async()=>{setLl(true);await loginWithGoogle();setLl(false);};
+  return (
+    <main style={{...S.page,...S.center}}>
+      <div style={{width:"100%",maxWidth:"360px",display:"flex",flexDirection:"column",gap:"32px"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+          <Logo/>
+          <h1 style={{fontSize:"30px",fontWeight:700,color:"#f9fafb",lineHeight:1.2,letterSpacing:"-0.5px"}}>Compras en equipo,<br/>sin fricción.</h1>
+          <p style={{fontSize:"16px",color:"#9ca3af",marginTop:"4px"}}>Crea un grupo, comparte el código, listo.</p>
+        </div>
+        <div style={{...S.card,display:"flex",flexDirection:"column",gap:"10px"}}>
+          <button onClick={()=>nav("create")} style={S.prim}>Crear un grupo nuevo</button>
+          <button onClick={()=>nav("join")}   style={S.ghost}>Unirse con código</button>
+          <button onClick={()=>nav("groups")} style={S.neut}>Ver mis grupos</button>
+        </div>
+        {isGuest&&<div style={S.banner}><p style={{margin:0,fontSize:"13px",color:"#9ca3af",lineHeight:1.5}}>Estás en modo invitado. Los grupos se guardan solo en este dispositivo.</p><GuestBtn onClick={doLogin} loading={ll}/></div>}
+        {!isGuest&&<button style={{background:"none",border:"none",cursor:"pointer",fontSize:"15px",color:"#9ca3af"}}>{user?.displayName??"Mi perfil"} →</button>}
+      </div>
+    </main>
+  );
+}
+
+// ---- JOIN ----
+function JoinPage({nav}) {
+  const {joinGroup}=useContext(GroupsCtx);
+  const {isGuest,loginWithGoogle}=useContext(AuthCtx);
+  const [code,setCode]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  const [ll,setLl]=useState(false);
+  const doLogin=async()=>{setLl(true);await loginWithGoogle();setLl(false);};
+  const handle=async()=>{
+    if(!code.trim()) return;
+    setLoading(true);setError("");
+    const gid=await joinGroup(code);
+    setLoading(false);
+    if(!gid){setError("Código inválido. Verificá que esté bien escrito.");return;}
+    nav("detail",gid);
+  };
+  return (
+    <main style={{...S.page,...S.center}}>
+      <div style={{width:"100%",maxWidth:"360px",display:"flex",flexDirection:"column",gap:"24px"}}>
+        <button onClick={()=>nav("home")} style={S.back}>← Volver</button>
+        <div><h1 style={{fontSize:"24px",fontWeight:700,color:"#f9fafb",margin:0}}>Unirse a grupo</h1><p style={{fontSize:"16px",color:"#9ca3af",marginTop:"4px"}}>Pedile el código al creador del grupo</p></div>
+        {isGuest&&<div style={S.banner}><p style={{margin:0,fontSize:"13px",color:"#9ca3af",lineHeight:1.5}}>Para unirte a grupos de otros necesitás una cuenta de Google.</p><GuestBtn onClick={doLogin} loading={ll}/></div>}
+        <div style={{...S.card,display:"flex",flexDirection:"column",gap:"12px"}}>
+          {error&&<p style={{fontSize:"13px",color:"#ef4444",margin:0}}>{error}</p>}
+          <input type="text" placeholder="Código del grupo" value={code} onChange={e=>setCode(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handle()} style={{...S.input,letterSpacing:"2px",textTransform:"uppercase"}} autoFocus/>
+          <button onClick={handle} disabled={loading} style={{...S.prim,opacity:loading?0.6:1,cursor:loading?"default":"pointer"}}>{loading?"Buscando...":"Unirse al grupo"}</button>
+          <p style={{fontSize:"12px",color:"#374151",textAlign:"center"}}>Podés probar con el código de un grupo ya creado</p>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ---- CREATE ----
+function CreatePage({nav}) {
+  const {addGroup}=useContext(GroupsCtx);
+  const [name,setName]=useState("");
+  const [loading,setLoading]=useState(false);
+  const handle=async()=>{if(!name.trim())return;setLoading(true);await addGroup(name.trim());setLoading(false);nav("groups");};
+  return (
+    <main style={{...S.page,...S.center}}>
+      <div style={{width:"100%",maxWidth:"360px",display:"flex",flexDirection:"column",gap:"24px"}}>
+        <button onClick={()=>nav("home")} style={S.back}>← Volver</button>
+        <div><h1 style={{fontSize:"24px",fontWeight:700,color:"#f9fafb",margin:0}}>Crear grupo</h1><p style={{fontSize:"16px",color:"#9ca3af",marginTop:"4px"}}>Dale un nombre a tu lista</p></div>
+        <div style={{...S.card,display:"flex",flexDirection:"column",gap:"12px"}}>
+          <input type="text" placeholder="Ej: Supermercado, Casa, Asado..." value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handle()} style={S.input} autoFocus/>
+          <button onClick={handle} disabled={loading||!name.trim()} style={{...S.prim,opacity:(!name.trim()||loading)?0.5:1}}>{loading?"Creando...":"Crear grupo"}</button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ---- GROUPS ----
+function GroupsPage({nav}) {
+  const {groups,deleteGroup}=useContext(GroupsCtx);
+  const {isGuest,user,loginWithGoogle}=useContext(AuthCtx);
+  const [ll,setLl]=useState(false);
+  const doLogin=async()=>{setLl(true);await loginWithGoogle();setLl(false);};
+  return (
+    <main style={{...S.page,padding:"32px 24px"}}>
+      <div style={{maxWidth:"480px",margin:"0 auto",display:"flex",flexDirection:"column",gap:"24px"}}>
+        <button onClick={()=>nav("home")} style={S.back}>← Volver</button>
+        <div><h1 style={{fontSize:"24px",fontWeight:700,color:"#f9fafb",margin:0}}>Mis grupos</h1><p style={{fontSize:"13px",color:"#4b5563",marginTop:"2px"}}>{isGuest?"Modo invitado":user?.displayName}</p></div>
+        {isGuest&&<div style={S.banner}><p style={{margin:0,fontSize:"13px",color:"#9ca3af",lineHeight:1.5}}>Modo invitado · los grupos solo están en este dispositivo.</p><GuestBtn onClick={doLogin} loading={ll}/></div>}
+        {groups.length===0?(
+          <div style={{...S.card,textAlign:"center"}}><p style={{color:"#4b5563",fontSize:"14px"}}>No tenés grupos todavía</p></div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+            {groups.map(g=>(
+              <div key={g.id} style={{background:"#111827",border:"1px solid #1f2937",borderRadius:"14px",padding:"16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px"}}>
+                <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>nav("detail",g.id)}>
+                  <p style={{fontSize:"15px",fontWeight:500,color:"#f9fafb",margin:0}}>{g.name}</p>
+                  <p style={{fontSize:"12px",color:"#4b5563",marginTop:"2px"}}>{g.items.length} item{g.items.length!==1?"s":""} · Código: <span style={{color:"#3b82f6",fontWeight:600}}>{g.code}</span></p>
+                </div>
+                <button onClick={e=>{e.stopPropagation();deleteGroup(g.id);}} style={{padding:"7px 14px",borderRadius:"8px",fontSize:"12px",fontWeight:500,cursor:"pointer",border:"1px solid #1f2937",background:"transparent",color:"#6b7280"}}>Borrar</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+          <button onClick={()=>nav("create")} style={S.prim}>Crear grupo nuevo</button>
+          <button onClick={()=>nav("join")}   style={S.ghost}>Unirse con código</button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ---- DETAIL ----
+function DetailPage({groupId,nav}) {
+  const {groups,addItem,clearBought}=useContext(GroupsCtx);
+  const [filter,setFilter]=useState("all");
+  const [name,setName]=useState("");
+  const [qty,setQty]=useState("1");
+  const [price,setPrice]=useState("");
+  const [addErr,setAddErr]=useState("");
+  const [clrCnf,setClrCnf]=useState(false);
+
+  const group=groups.find(g=>g.id===groupId);
+  if(!group) return <main style={{...S.page,...S.center}}><p style={{color:"#4b5563"}}>Grupo no encontrado</p></main>;
+
+  const filtered=filter==="pending"?group.items.filter(i=>!i.purchased):filter==="purchased"?group.items.filter(i=>i.purchased):group.items;
+  const pending=group.items.filter(i=>!i.purchased).length;
+  const bought=group.items.filter(i=>i.purchased).length;
+  const total=group.items.reduce((a,i)=>a+(i.price||0)*(parseFloat(i.quantity)||1),0);
+  const totalB=group.items.filter(i=>i.purchased).reduce((a,i)=>a+(i.price||0)*(parseFloat(i.quantity)||1),0);
+
+  const handleAdd=async()=>{
+    if(!name.trim()) return; setAddErr("");
+    try{await addItem(groupId,name.trim(),qty||"1",parseFloat(price)||0);setName("");setQty("1");setPrice("");}
+    catch(e){setAddErr(e.message);}
+  };
+  const handleClear=async()=>{if(!clrCnf){setClrCnf(true);return;}await clearBought(groupId);setClrCnf(false);setFilter("all");};
+
+  return (
+    <main style={{...S.page,padding:"28px 16px 40px"}}>
+      <div style={{maxWidth:"480px",margin:"0 auto",display:"flex",flexDirection:"column",gap:"20px"}}>
+        <button onClick={()=>nav("groups")} style={S.back}>← Mis grupos</button>
+
+        <div>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:"12px"}}>
+            <h1 style={{fontSize:"24px",fontWeight:700,color:"#f9fafb",margin:0,flex:1}}>{group.name}</h1>
+            <button style={{minHeight:"40px",padding:"0 14px",borderRadius:"10px",fontSize:"13px",fontWeight:500,cursor:"pointer",background:"rgba(59,130,246,0.1)",color:"#3b82f6",border:"1px solid rgba(59,130,246,0.2)"}}>Compartir 🔗</button>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:"8px",marginTop:"6px",flexWrap:"wrap"}}>
+            <span style={{fontSize:"12px",color:"#4b5563"}}>Código: <span style={{color:"#3b82f6",fontWeight:600}}>{group.code}</span></span>
+            <span style={{color:"#374151",fontSize:"12px"}}>·</span>
+            <span style={{fontSize:"12px",color:"#4b5563"}}>{pending} pendiente{pending!==1?"s":""}</span>
+            {bought>0&&<><span style={{color:"#374151",fontSize:"12px"}}>·</span><span style={{fontSize:"12px",color:"#10b981"}}>{bought} comprado{bought!==1?"s":""}</span></>}
+          </div>
+        </div>
+
+        {total>0&&(
+          <div style={{background:"#111827",border:"1px solid #1f2937",borderRadius:"14px",padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
+              <span style={{fontSize:"12px",color:"#6b7280"}}>Total estimado: <span style={{color:"#f9fafb",fontWeight:600}}>{fmt(total)}</span></span>
+              {totalB>0&&<span style={{fontSize:"12px",color:"#10b981"}}>Ya compraste: <span style={{fontWeight:600}}>{fmt(totalB)}</span></span>}
+            </div>
+            <span style={{fontSize:"24px"}}>🧮</span>
+          </div>
+        )}
+
+        <div style={{background:"#111827",border:"1px solid #1f2937",borderRadius:"14px",padding:"14px",display:"flex",flexDirection:"column",gap:"8px"}}>
+          {addErr&&<p style={{fontSize:"12px",color:"#ef4444",margin:0}}>{addErr}</p>}
+          <div style={{display:"flex",gap:"8px"}}>
+            <input type="text" placeholder="Producto..." value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleAdd()} style={{...S.input,flex:1,minWidth:0,padding:"12px 10px"}}/>
+            <input type="text" placeholder="x1" value={qty} onChange={e=>setQty(e.target.value)} style={{...S.input,width:"46px",textAlign:"center",padding:"12px 4px"}}/>
+            <input type="number" placeholder="$" value={price} onChange={e=>setPrice(e.target.value)} style={{...S.input,width:"68px",padding:"12px 6px"}}/>
+          </div>
+          <button onClick={handleAdd} style={S.prim}>Agregar</button>
+        </div>
+
+        {group.items.length>0&&<p style={{fontSize:"12px",color:"#374151",textAlign:"center"}}>✏️ Tocá el nombre, cantidad o precio para editar</p>}
+
+        <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+          <div style={{display:"flex",gap:"6px",flex:1}}>
+            {["all","pending","purchased"].map(f=>(
+              <button key={f} onClick={()=>setFilter(f)} style={{padding:"9px 14px",borderRadius:"8px",fontSize:"13px",fontWeight:500,cursor:"pointer",border:filter===f?"none":"1px solid #1f2937",background:filter===f?"#f9fafb":"#111827",color:filter===f?"#0b0f19":"#6b7280",flex:1,minHeight:"38px"}}>
+                {f==="all"?"Todos":f==="pending"?"Pendientes":"Comprados"}
+              </button>
+            ))}
+          </div>
+          {bought>0&&<button onClick={handleClear} onBlur={()=>setClrCnf(false)} style={{minHeight:"38px",padding:"0 14px",borderRadius:"8px",fontSize:"12px",fontWeight:500,cursor:"pointer",whiteSpace:"nowrap",background:clrCnf?"rgba(239,68,68,0.1)":"transparent",color:clrCnf?"#ef4444":"#6b7280",border:clrCnf?"1px solid rgba(239,68,68,0.25)":"1px solid #1f2937"}}>{clrCnf?"¿Seguro?":"Limpiar ✓"}</button>}
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+          {filtered.length===0?(
+            <div style={{...S.card,textAlign:"center"}}><p style={{color:"#4b5563",fontSize:"14px"}}>{filter==="all"?"Lista vacía · agregá un producto arriba":filter==="pending"?"¡Todo comprado! 🎉":"Todavía no compraste nada"}</p></div>
+          ):filtered.map(item=><ItemCard key={item.id} item={item} groupId={groupId}/>)}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ---- APP ----
+function App() {
+  const {user,isGuest}=useContext(AuthCtx);
+  const [page,setPage]=useState("home");
+  const [param,setParam]=useState(null);
+  const nav=(p,id=null)=>{setPage(p);if(id!==null)setParam(id);};
+  if(!user&&!isGuest) return <LoginPage/>;
+  switch(page){
+    case "home":   return <HomePage nav={nav}/>;
+    case "join":   return <JoinPage nav={nav}/>;
+    case "create": return <CreatePage nav={nav}/>;
+    case "groups": return <GroupsPage nav={nav}/>;
+    case "detail": return <DetailPage groupId={param} nav={nav}/>;
+    default:       return <HomePage nav={nav}/>;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <AuthProvider><GroupsProvider><App/></GroupsProvider></AuthProvider>
+);
+</script>
+</body>
+</html>
