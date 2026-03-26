@@ -9,15 +9,13 @@ export default function ProfilePage() {
   const { user, isGuest, updateDisplayName, logout } = useAuth();
   const [name, setName] = useState(user?.displayName ?? "");
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const { avatar, setAvatar } = useAvatar(user?.uid);
   const navigate = useNavigate();
 
-  // Si es invitado o no hay usuario, redirigir al home
   useEffect(() => {
-    if (isGuest || !user) {
-      navigate("/", { replace: true });
-    }
+    if (isGuest || !user) navigate("/", { replace: true });
   }, [isGuest, user, navigate]);
 
   const handleSave = async () => {
@@ -26,7 +24,8 @@ export default function ProfilePage() {
     setSaving(true);
     await updateDisplayName(trimmed);
     setSaving(false);
-    navigate("/");
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleLogout = async () => {
@@ -37,80 +36,51 @@ export default function ProfilePage() {
     <>
       <style>{`
         .page-root {
-          min-height: 100vh;
-          background: #0b0f19;
-          background-image: radial-gradient(ellipse 120% 60% at 50% -5%, rgba(59,130,246,0.18), transparent);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
+          min-height: 100vh; background: #0b0f19;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center; padding: 24px;
         }
         .page-input {
-          background: #0b0f19;
-          border: 1px solid #1f2937;
-          border-radius: 8px;
-          padding: 12px 14px;
-          font-size: 14px;
-          color: #f9fafb;
-          outline: none;
-          width: 100%;
-          box-sizing: border-box;
-          transition: border-color 150ms ease;
+          background: #0b0f19; border: 1px solid #1f2937; border-radius: 12px;
+          padding: 14px 16px; font-size: 16px; color: #f9fafb; outline: none;
+          width: 100%; box-sizing: border-box; transition: border-color 150ms ease;
+          -webkit-appearance: none;
         }
         .page-input::placeholder { color: #374151; }
         .page-input:focus { border-color: #3b82f6; }
         .btn-primary {
-          width: 100%;
-          padding: 13px 16px;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          background: #3b82f6;
-          color: #fff;
-          border: none;
-          transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+          width: 100%; min-height: 50px; border-radius: 14px;
+          font-size: 15px; font-weight: 600; cursor: pointer;
+          border: none; transition: transform 150ms ease, background 150ms ease;
+          -webkit-tap-highlight-color: transparent;
         }
-        .btn-primary:hover { background: #2563eb; transform: scale(1.02); box-shadow: 0 4px 20px rgba(59,130,246,0.35); }
         .btn-primary:active { transform: scale(0.97); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary:disabled { opacity: 0.5; cursor: default; }
         .btn-danger {
-          width: 100%;
-          padding: 13px 16px;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          background: transparent;
-          color: #6b7280;
-          border: 1px solid #1f2937;
-          transition: all 150ms ease;
+          width: 100%; min-height: 46px; border-radius: 14px;
+          font-size: 14px; font-weight: 500; cursor: pointer;
+          background: transparent; color: #6b7280; border: 1px solid #1f2937;
+          transition: all 150ms ease; -webkit-tap-highlight-color: transparent;
         }
-        .btn-danger:hover { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+        .btn-danger:active { background: rgba(239,68,68,0.08); color: #ef4444; border-color: rgba(239,68,68,0.2); }
         .back-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 13px;
-          color: #4b5563;
-          padding: 0;
-          transition: color 150ms ease;
+          background: none; border: none; cursor: pointer;
+          font-size: 14px; color: #4b5563; padding: 0;
+          -webkit-tap-highlight-color: transparent;
         }
-        .back-btn:hover { color: #f9fafb; }
+        .back-btn:active { color: #f9fafb; }
       `}</style>
 
       <main className="page-root">
-        <div style={{ width: "100%", maxWidth: "360px", display: "flex", flexDirection: "column", gap: "28px" }}>
+        <div style={{ width: "100%", maxWidth: "340px", display: "flex", flexDirection: "column", gap: "28px" }}>
 
           <button className="back-btn" onClick={() => navigate(-1)}>← Volver</button>
 
-          {/* Avatar centrado */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+          {/* Avatar */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
             <button
               onClick={() => setSelectorOpen(true)}
-              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", position: "relative" }}
-              title="Cambiar avatar"
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", position: "relative", WebkitTapHighlightColor: "transparent" }}
             >
               <UserAvatar user={user} avatar={avatar} size={76} />
               <span style={{
@@ -121,10 +91,10 @@ export default function ProfilePage() {
               }}>✏️</span>
             </button>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontSize: "18px", fontWeight: 700, color: "#f9fafb", margin: 0 }}>
+              <p style={{ fontSize: "18px", fontWeight: 700, color: "#f9fafb", margin: "0 0 3px" }}>
                 {user?.displayName ?? "Sin nombre"}
               </p>
-              <p style={{ fontSize: "13px", color: "#4b5563", margin: 0, marginTop: "3px" }}>
+              <p style={{ fontSize: "13px", color: "#4b5563", margin: 0 }}>
                 {user?.email}
               </p>
             </div>
@@ -138,30 +108,31 @@ export default function ProfilePage() {
             />
           )}
 
-          <div style={{
-            background: "#111827", border: "1px solid #1f2937",
-            borderRadius: "16px", padding: "20px",
-            display: "flex", flexDirection: "column", gap: "12px",
-          }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: 500 }}>
-                Nombre
-              </label>
-              <input
-                type="text"
-                className="page-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
-              />
-            </div>
+          {/* Nombre */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label style={{ fontSize: "12px", color: "#6b7280", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Nombre
+            </label>
+            <input
+              type="text"
+              className="page-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+              autoCapitalize="words"
+            />
             <button
               type="button"
               className="btn-primary"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !name.trim()}
+              style={{
+                background: saved ? "rgba(16,185,129,0.15)" : "#3b82f6",
+                color: saved ? "#10b981" : "#fff",
+                border: saved ? "1px solid rgba(16,185,129,0.2)" : "none",
+              }}
             >
-              {saving ? "Guardando..." : "Guardar cambios"}
+              {saving ? "Guardando…" : saved ? "✓ Guardado" : "Guardar nombre"}
             </button>
           </div>
 

@@ -26,16 +26,16 @@ export default function JoinGroup() {
       setError("");
       const groupId = await joinGroup(cleaned);
       if (groupId === "GUEST_CANNOT_JOIN") {
-        setError("Para unirte a grupos de otros necesitás iniciar sesión con Google.");
+        setError("Necesitás una cuenta de Google para unirte a grupos de otras personas.");
         return;
       }
       if (!groupId) {
-        setError("Código inválido. Verificá que esté bien escrito.");
+        setError("Código incorrecto. Pedíle el código al creador del grupo.");
         return;
       }
       navigate(`/groups/${groupId}`);
-    } catch (e) {
-      setError("Hubo un problema. Intentá de nuevo.");
+    } catch {
+      setError("Algo salió mal. Intentá de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,6 @@ export default function JoinGroup() {
         .page-root {
           min-height: 100vh;
           background: #0b0f19;
-          background-image: radial-gradient(ellipse 120% 60% at 50% -5%, rgba(59,130,246,0.18), transparent);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -55,72 +54,51 @@ export default function JoinGroup() {
           padding: 24px;
         }
         .page-input {
-          background: #0b0f19;
-          border: 1px solid #1f2937;
-          border-radius: 8px;
-          padding: 12px 14px;
-          font-size: 14px;
-          color: #f9fafb;
-          outline: none;
-          width: 100%;
-          box-sizing: border-box;
-          transition: border-color 150ms ease;
-          letter-spacing: 2px;
-          text-transform: uppercase;
+          background: #0b0f19; border: 1px solid #1f2937; border-radius: 12px;
+          padding: 16px; font-size: 22px; font-weight: 700; color: #f9fafb;
+          outline: none; width: 100%; box-sizing: border-box;
+          letter-spacing: 5px; text-transform: uppercase; text-align: center;
+          transition: border-color 150ms ease; -webkit-appearance: none;
         }
-        .page-input::placeholder { color: #374151; letter-spacing: 0; text-transform: none; }
+        .page-input::placeholder { color: #374151; letter-spacing: 2px; font-weight: 400; font-size: 15px; text-align: center; }
         .page-input:focus { border-color: #3b82f6; }
         .btn-primary {
-          width: 100%;
-          padding: 13px 16px;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          background: #3b82f6;
-          color: #fff;
-          border: none;
-          transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+          width: 100%; min-height: 52px; border-radius: 14px;
+          font-size: 16px; font-weight: 600; cursor: pointer;
+          background: #3b82f6; color: #fff; border: none;
+          transition: transform 150ms ease, background 150ms ease;
+          -webkit-tap-highlight-color: transparent;
         }
-        .btn-primary:hover { background: #2563eb; transform: scale(1.02); box-shadow: 0 4px 20px rgba(59,130,246,0.35); }
-        .btn-primary:active { transform: scale(0.97); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary:active { transform: scale(0.97); background: #2563eb; }
+        .btn-primary:disabled { opacity: 0.5; cursor: default; }
         .back-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 13px;
-          color: #4b5563;
-          padding: 0;
-          transition: color 150ms ease;
+          background: none; border: none; cursor: pointer;
+          font-size: 14px; color: #4b5563; padding: 0;
+          transition: color 150ms ease; -webkit-tap-highlight-color: transparent;
         }
-        .back-btn:hover { color: #f9fafb; }
+        .back-btn:active { color: #f9fafb; }
       `}</style>
 
       <main className="page-root">
-        <div style={{ width: "100%", maxWidth: "360px", display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ width: "100%", maxWidth: "340px", display: "flex", flexDirection: "column", gap: "24px" }}>
 
-          <button className="back-btn" style={{ fontSize: "16px", color: "#9ca3af"}} onClick={() => navigate(-1)}>← Volver</button>
+          <button className="back-btn" onClick={() => navigate(-1)}>← Volver</button>
 
           <div>
-            <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#f9fafb", margin: 0 }}>
-              Unirse a grupo
+            <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#f9fafb", margin: "0 0 6px" }}>
+              Unirse a un grupo
             </h1>
-            <p style={{ fontSize: "16px", color: "#9ca3af", margin: 0, marginTop: "4px" }}>
-              Pidele el código al creador del grupo
+            <p style={{ fontSize: "15px", color: "#6b7280", margin: 0 }}>
+              Pedíle el código al creador del grupo.
             </p>
           </div>
 
-          {/* Banner modo invitado */}
+          {/* Banner invitado */}
           {isGuest && (
             <div style={{
-              background: "rgba(59,130,246,0.07)",
-              border: "1px solid rgba(59,130,246,0.18)",
-              borderRadius: "12px",
-              padding: "14px 16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
+              background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)",
+              borderRadius: "14px", padding: "16px",
+              display: "flex", flexDirection: "column", gap: "12px",
             }}>
               <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af", lineHeight: 1.5 }}>
                 Para unirte a grupos de otros necesitás una cuenta de Google.
@@ -130,39 +108,41 @@ export default function JoinGroup() {
                 disabled={loginLoading}
                 style={{
                   background: "#3b82f6", color: "#fff", border: "none",
-                  borderRadius: "8px", padding: "9px 14px", fontSize: "13px",
-                  fontWeight: 500, cursor: "pointer", opacity: loginLoading ? 0.6 : 1,
+                  borderRadius: "10px", padding: "10px 14px", fontSize: "14px",
+                  fontWeight: 600, cursor: "pointer", opacity: loginLoading ? 0.6 : 1,
+                  WebkitTapHighlightColor: "transparent",
                 }}
               >
-                {loginLoading ? "Iniciando sesión…" : "Iniciar sesión con Google →"}
+                {loginLoading ? "Iniciando sesión…" : "Conectar con Google"}
               </button>
             </div>
           )}
 
-          <div style={{
-            background: "#111827", border: "1px solid #1f2937",
-            borderRadius: "16px", padding: "20px",
-            display: "flex", flexDirection: "column", gap: "12px",
-          }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {error && (
-              <p style={{ fontSize: "16px", color: "#9ca3af", margin: 0 }}>{error}</p>
+              <div style={{
+                fontSize: "13px", color: "#ef4444",
+                background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)",
+                borderRadius: "10px", padding: "12px 14px",
+              }}>{error}</div>
             )}
             <input
               type="text"
               className="page-input"
-              placeholder="Código del grupo"
+              placeholder="Código"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleJoin(); }}
               autoFocus
+              autoComplete="off"
             />
             <button
               type="button"
               className="btn-primary"
               onClick={handleJoin}
-              disabled={loading}
+              disabled={loading || !code.trim()}
             >
-              {loading ? "Buscando..." : "Unirse al grupo"}
+              {loading ? "Buscando…" : "Unirme al grupo"}
             </button>
           </div>
 

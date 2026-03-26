@@ -28,7 +28,6 @@ export default function CreateGroup() {
         .page-root {
           min-height: 100vh;
           background: #0b0f19;
-          background-image: radial-gradient(ellipse 120% 60% at 50% -5%, rgba(59,130,246,0.18), transparent);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -36,82 +35,62 @@ export default function CreateGroup() {
           padding: 24px;
         }
         .page-input {
-          background: #0b0f19;
-          border: 1px solid #1f2937;
-          border-radius: 8px;
-          padding: 12px 14px;
-          font-size: 14px;
-          color: #f9fafb;
-          outline: none;
-          width: 100%;
-          box-sizing: border-box;
-          transition: border-color 150ms ease;
+          background: #0b0f19; border: 1px solid #1f2937; border-radius: 12px;
+          padding: 14px 16px; font-size: 17px; color: #f9fafb; outline: none;
+          width: 100%; box-sizing: border-box; transition: border-color 150ms ease;
+          -webkit-appearance: none;
         }
         .page-input::placeholder { color: #374151; }
         .page-input:focus { border-color: #3b82f6; }
         .btn-primary {
-          width: 100%;
-          padding: 13px 16px;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          background: #3b82f6;
-          color: #fff;
-          border: none;
-          transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+          width: 100%; min-height: 52px; border-radius: 14px;
+          font-size: 16px; font-weight: 600; cursor: pointer;
+          background: #3b82f6; color: #fff; border: none;
+          transition: transform 150ms ease, background 150ms ease;
+          -webkit-tap-highlight-color: transparent;
         }
-        .btn-primary:hover { background: #2563eb; transform: scale(1.02); box-shadow: 0 4px 20px rgba(59,130,246,0.35); }
-        .btn-primary:active { transform: scale(0.97); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary:active { transform: scale(0.97); background: #2563eb; }
+        .btn-primary:disabled { opacity: 0.5; cursor: default; }
         .back-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 13px;
-          color: #4b5563;
-          padding: 0;
-          transition: color 150ms ease;
+          background: none; border: none; cursor: pointer;
+          font-size: 14px; color: #4b5563; padding: 0;
+          transition: color 150ms ease; -webkit-tap-highlight-color: transparent;
         }
-        .back-btn:hover { color: #f9fafb; }
+        .back-btn:active { color: #f9fafb; }
       `}</style>
 
       <main className="page-root">
-        <div style={{ width: "100%", maxWidth: "360px", display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div style={{ width: "100%", maxWidth: "340px", display: "flex", flexDirection: "column", gap: "24px" }}>
 
-          <button className="back-btn "style={{ fontSize: "15px", color: "#9ca3af",}} onClick={() => navigate(-1)}>← Volver</button>
+          <button className="back-btn" onClick={() => navigate(-1)}>← Volver</button>
 
           <div>
-            <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#f9fafb", margin: 0 }}>
-              Crear grupo
+            <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#f9fafb", margin: "0 0 6px" }}>
+              Nuevo grupo
             </h1>
-            <p style={{ fontSize: "16px", color: "#9ca3af", margin: 0, marginTop: "4px" }}>
-              Dale un nombre a tu lista compartida
+            <p style={{ fontSize: "15px", color: "#6b7280", margin: 0 }}>
+              Después compartís el código y listo.
             </p>
           </div>
 
-          <div style={{
-            background: "#111827", border: "1px solid #1f2937",
-            borderRadius: "16px", padding: "20px",
-            display: "flex", flexDirection: "column", gap: "12px", 
-          }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <input
-            style={{ fontSize: "15px", color: "#9ca3af",}}
               type="text"
               className="page-input"
-              placeholder="Nombre del grupo"
+              placeholder="Ej: Supermercado, Casa, Trabajo…"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
               autoFocus
+              autoCapitalize="words"
             />
             <button
               type="button"
               className="btn-primary"
               onClick={handleCreate}
-              disabled={loading}
+              disabled={loading || !groupName.trim()}
             >
-              {loading ? "Creando..." : "Crear grupo"}
+              {loading ? "Creando…" : "Crear grupo"}
             </button>
           </div>
 

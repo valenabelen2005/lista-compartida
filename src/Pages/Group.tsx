@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGroups } from "../context/GroupsContext";
 import { useAuth } from "../context/AuthContext";
@@ -19,6 +20,7 @@ export default function Groups() {
   const { myGroups, isLoading, leaveGroup, deleteGroup } = useGroups();
   const { user, isGuest } = useAuth();
   const navigate = useNavigate();
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   return (
     <>
@@ -26,116 +28,88 @@ export default function Groups() {
         .groups-root {
           min-height: 100vh;
           background: #0b0f19;
-          background-image: radial-gradient(ellipse 120% 60% at 50% -5%, rgba(59,130,246,0.18), transparent);
-          padding: 32px 24px;
+          padding: 28px 20px 100px;
         }
         .group-card {
           background: #111827;
           border: 1px solid #1f2937;
-          border-radius: 14px;
-          padding: 12px 14px;
+          border-radius: 16px;
+          padding: 14px 16px;
           display: flex;
           align-items: center;
-          gap: 12px;
-          transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+          gap: 14px;
           cursor: pointer;
+          transition: background 150ms ease;
+          -webkit-tap-highlight-color: transparent;
         }
-        .group-card:hover {
-          background: #161e2e;
-          border-color: #374151;
-          transform: scale(1.01);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        .group-card:active { background: #161e2e; }
+        .g-btn-destroy {
+          padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
+          cursor: pointer; white-space: nowrap; flex-shrink: 0;
+          transition: all 150ms ease; border: 1px solid;
+          -webkit-tap-highlight-color: transparent;
         }
-        .btn-action-danger {
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 12px;
-          font-weight: 500;
-          cursor: pointer;
-          border: 1px solid rgba(239,68,68,0.2);
-          background: transparent;
-          color: #6b7280;
-          transition: all 150ms ease;
-          white-space: nowrap;
-          flex-shrink: 0;
+        .g-btn-destroy.normal { background: transparent; color: #4b5563; border-color: #1f2937; }
+        .g-btn-destroy.confirm { background: rgba(239,68,68,0.08); color: #ef4444; border-color: rgba(239,68,68,0.25); }
+        .g-btn-primary {
+          width: 100%; min-height: 50px; border-radius: 14px;
+          font-size: 15px; font-weight: 600; cursor: pointer;
+          background: #3b82f6; color: #fff; border: none;
+          transition: transform 150ms ease, background 150ms ease;
+          -webkit-tap-highlight-color: transparent;
         }
-        .btn-action-danger:hover { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.4); }
-        .btn-primary {
-          width: 100%;
-          padding: 13px 16px;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          background: #3b82f6;
-          color: #fff;
-          border: none;
-          transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+        .g-btn-primary:active { transform: scale(0.97); background: #2563eb; }
+        .g-btn-secondary {
+          width: 100%; min-height: 46px; border-radius: 14px;
+          font-size: 15px; font-weight: 500; cursor: pointer;
+          background: transparent; color: #d1d5db; border: 1px solid #1f2937;
+          transition: transform 150ms ease, background 150ms ease;
+          -webkit-tap-highlight-color: transparent;
         }
-        .btn-primary:hover { background: #2563eb; transform: scale(1.02); box-shadow: 0 4px 20px rgba(59,130,246,0.35); }
-        .btn-primary:active { transform: scale(0.97); }
-        .btn-secondary {
-          width: 100%;
-          padding: 12px 16px;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 400;
-          cursor: pointer;
-          background: transparent;
-          color: #9ca3af;
-          border: 1px solid #1f2937;
-          transition: all 150ms ease;
-        }
-        .btn-secondary:hover { background: #161e2e; border-color: #374151; color: #f9fafb; }
+        .g-btn-secondary:active { transform: scale(0.97); background: #111827; }
       `}</style>
 
       <main className="groups-root">
-        <div style={{ maxWidth: "480px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
-
-          <button
-            className="back-btn"
-            style={{ fontSize: "16px", color: "#9ca3af", background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}
-            onClick={() => navigate("/")}
-          >
-            ← Volver
-          </button>
+        <div style={{ maxWidth: "480px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px" }}>
 
           {/* Header */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "4px" }}>
             <div>
-              <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#f9fafb", margin: 0 }}>
+              <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#f9fafb", margin: 0 }}>
                 Mis grupos
               </h1>
-              <p style={{ fontSize: "13px", color: "#4b5563", margin: 0, marginTop: "2px" }}>
-                {isGuest ? "Modo invitado" : user?.displayName}
+              <p style={{ fontSize: "13px", color: "#4b5563", margin: "2px 0 0" }}>
+                {isGuest ? "Modo sin cuenta" : (user?.displayName ?? "")}
               </p>
             </div>
-            <button
-              onClick={() => navigate("/profile")}
-              style={{
-                background: "#111827", border: "1px solid #1f2937",
-                borderRadius: "10px", padding: "8px 14px",
-                fontSize: "12px", color: "#6b7280", cursor: "pointer",
-                transition: "color 150ms ease",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#f9fafb")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
-            >
-              Perfil
-            </button>
+            {!isGuest && (
+              <button
+                onClick={() => navigate("/profile")}
+                style={{
+                  background: "#111827", border: "1px solid #1f2937",
+                  borderRadius: "10px", padding: "8px 14px",
+                  fontSize: "13px", color: "#6b7280", cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                Perfil
+              </button>
+            )}
           </div>
 
-          {/* Lista */}
+          {/* Lista de grupos */}
           {isLoading ? (
-            <p style={{ color: "#4b5563", fontSize: "14px" }}>Cargando...</p>
+            <p style={{ color: "#374151", fontSize: "14px" }}>Cargando…</p>
           ) : myGroups.length === 0 ? (
             <div style={{
               background: "#111827", border: "1px solid #1f2937",
-              borderRadius: "14px", padding: "32px",
-              textAlign: "center",
+              borderRadius: "16px", padding: "40px 24px", textAlign: "center",
             }}>
-              <p style={{ color: "#4b5563", fontSize: "14px", margin: 0 }}>
-                No tenés grupos todavía
+              <p style={{ color: "#f9fafb", fontSize: "16px", fontWeight: 600, margin: "0 0 6px" }}>
+                Todavía no tenés grupos
+              </p>
+              <p style={{ color: "#4b5563", fontSize: "13px", margin: 0 }}>
+                Creá uno o unite con un código
               </p>
             </div>
           ) : (
@@ -144,46 +118,61 @@ export default function Groups() {
                 const isCreator = isGuest
                   ? group.createdBy === "guest"
                   : group.createdBy === user?.uid;
-                return (
-                  <div key={group.id} className="group-card">
+                const pending = group.items?.filter((i) => !i.purchased).length ?? 0;
+                const total = group.items?.length ?? 0;
+                const isConfirm = confirmId === group.id;
 
-                    {/* Avatar del grupo */}
-                    <div
-                      onClick={() => navigate(`/groups/${group.id}`)}
-                      style={{
-                        width: "40px", height: "40px", borderRadius: "50%",
-                        background: groupColor(group.name),
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "16px", fontWeight: 700, color: "rgba(255,255,255,0.9)",
-                        flexShrink: 0,
-                      }}
-                    >
+                return (
+                  <div
+                    key={group.id}
+                    className="group-card"
+                    onClick={() => {
+                      if (isConfirm) { setConfirmId(null); return; }
+                      navigate(`/groups/${group.id}`);
+                    }}
+                  >
+                    {/* Avatar */}
+                    <div style={{
+                      width: "44px", height: "44px", borderRadius: "12px",
+                      background: groupColor(group.name),
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "18px", fontWeight: 700, color: "rgba(255,255,255,0.9)",
+                      flexShrink: 0,
+                    }}>
                       {group.name[0]?.toUpperCase() ?? "?"}
                     </div>
 
                     {/* Info */}
-                    <div
-                      style={{ flex: 1, minWidth: 0 }}
-                      onClick={() => navigate(`/groups/${group.id}`)}
-                    >
-                      <p style={{ fontSize: "15px", fontWeight: 600, color: "#f9fafb", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "15px", fontWeight: 600, color: "#f9fafb", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {group.name}
                       </p>
-                      <p style={{ fontSize: "12px", color: "#4b5563", margin: 0, marginTop: "2px" }}>
-                        {group.members.length} miembro{group.members.length !== 1 ? "s" : ""}
-                        {group.items?.length > 0 && ` · ${group.items.length} ítems`}
+                      <p style={{ fontSize: "12px", color: "#4b5563", margin: "2px 0 0" }}>
+                        {total === 0
+                          ? "Lista vacía"
+                          : pending > 0
+                          ? `${pending} pendiente${pending !== 1 ? "s" : ""}`
+                          : "Todo comprado ✓"}
+                        {group.members.length > 1 && ` · ${group.members.length} personas`}
                       </p>
                     </div>
 
-                    {/* Acción */}
+                    {/* Borrar / Salir */}
                     <button
-                      className="btn-action-danger"
+                      className={`g-btn-destroy ${isConfirm ? "confirm" : "normal"}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        isCreator ? deleteGroup(group.id) : leaveGroup(group.id);
+                        if (!isCreator) { leaveGroup(group.id); return; }
+                        if (isConfirm) {
+                          deleteGroup(group.id);
+                          setConfirmId(null);
+                        } else {
+                          setConfirmId(group.id);
+                        }
                       }}
+                      onBlur={() => setConfirmId(null)}
                     >
-                      {isCreator ? "Borrar" : "Salir"}
+                      {isConfirm ? "¿Seguro?" : isCreator ? "Borrar" : "Salir"}
                     </button>
                   </div>
                 );
@@ -192,12 +181,12 @@ export default function Groups() {
           )}
 
           {/* Acciones */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <button className="btn-primary" onClick={() => navigate("/create")}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <button className="g-btn-primary" onClick={() => navigate("/create")}>
               + Crear grupo nuevo
             </button>
-            <button className="btn-secondary" onClick={() => navigate("/join")}>
-              Unirse con código
+            <button className="g-btn-secondary" onClick={() => navigate("/join")}>
+              Unirme con código
             </button>
           </div>
 

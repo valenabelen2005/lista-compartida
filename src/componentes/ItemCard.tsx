@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { ShoppingItemType } from "../types";
 
+const STORE_OPTIONS = ["Dia", "Mercadona", "Amazon", "Lidl", "Ikea", "Carrefour", "Otro"];
+
 interface Props {
   item: ShoppingItemType;
   groupId: string;
@@ -9,31 +11,34 @@ interface Props {
   onUpdateName: (name: string) => Promise<void>;
   onUpdateQuantity: (quantity: string) => Promise<void>;
   onUpdatePrice: (price: number | undefined, priceMode: "total" | "unit") => Promise<void>;
+  onUpdateStore: (store: string | undefined) => Promise<void>;
   onOpenDetail: () => void;
 }
 
 export default function ItemCard({
-  item,
-  onToggle,
-  onDelete,
-  onUpdateName,
-  onUpdateQuantity,
-  onUpdatePrice,
-  onOpenDetail,
+  item, onToggle, onDelete, onUpdateName, onUpdateQuantity, onUpdatePrice, onUpdateStore, onOpenDetail,
 }: Props) {
-  const [editingField, setEditingField] = useState<"name" | "quantity" | "price" | null>(null);
+  const [editingField, setEditingField] = useState<"name" | "quantity" | "price" | "store" | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingQuantity, setEditingQuantity] = useState("");
   const [editingPrice, setEditingPrice] = useState("");
   const [editingPriceMode, setEditingPriceMode] = useState<"total" | "unit">("unit");
+  const [editingStore, setEditingStore] = useState("");
+  const [editingStoreCustom, setEditingStoreCustom] = useState("");
 
-  const startEdit = (field: "name" | "quantity" | "price") => {
+  const startEdit = (field: "name" | "quantity" | "price" | "store") => {
     setEditingField(field);
     if (field === "name") setEditingName(item.name);
     if (field === "quantity") setEditingQuantity(item.quantity);
     if (field === "price") {
       setEditingPrice(item.price !== undefined ? String(item.price) : "");
       setEditingPriceMode(item.priceMode ?? "unit");
+    }
+    if (field === "store") {
+      const current = item.store ?? "";
+      const isKnown = STORE_OPTIONS.includes(current);
+      setEditingStore(isKnown ? current : (current ? "Otro" : ""));
+      setEditingStoreCustom(isKnown ? "" : current);
     }
   };
 
@@ -46,14 +51,18 @@ export default function ItemCard({
       const parsed = parseFloat(editingPrice.replace(",", "."));
       await onUpdatePrice(isNaN(parsed) || parsed <= 0 ? undefined : parsed, editingPriceMode);
     }
+    if (editingField === "store") {
+      const final = editingStore === "Otro" ? editingStoreCustom.trim() : editingStore;
+      await onUpdateStore(final || undefined);
+    }
     setEditingField(null);
   };
 
-  const formatPrice = (p: number) =>
-    p.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 });
+  const formatPrice = (n: number) =>
+    n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 });
 
   const fmtDate = (ts: number) =>
-    new Date(ts).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    new Date(ts).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
 
   const p = item.purchased;
 
@@ -61,266 +70,238 @@ export default function ItemCard({
     <div
       onClick={!editingField ? onOpenDetail : undefined}
       style={{
-        background: p ? "rgba(16,185,129,0.05)" : "#111827",
-        border: `1px solid ${p ? "rgba(16,185,129,0.22)" : "#1f2937"}`,
-        borderRadius: "14px",
-        padding: "12px 12px",
+        background: p ? "rgba(16,185,129,0.04)" : "#111827",
+        border: `1px solid ${p ? "rgba(16,185,129,0.12)" : "#1f2937"}`,
+        borderRadius: "16px",
+        padding: "14px",
         display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        WebkitTapHighlightColor: "transparent",
-        transition: "background 200ms ease, border-color 200ms ease",
+        alignItems: "flex-start",
+        gap: "12px",
         cursor: !editingField ? "pointer" : "default",
+        WebkitTapHighlightColor: "transparent",
+        transition: "background 150ms ease",
       }}
     >
       <style>{`
-        .edit-input-v2 {
-          background: #0b0f19;
-          border: 1px solid #374151;
-          border-radius: 8px;
-          padding: 9px 12px;
-          font-size: 15px;
-          color: #f9fafb;
-          outline: none;
-          flex: 1;
-          min-width: 0;
-          -webkit-appearance: none;
+        .ic-inp {
+          background: #0b0f19; border: 1px solid #374151; border-radius: 10px;
+          padding: 10px 12px; font-size: 15px; color: #f9fafb; outline: none;
+          flex: 1; min-width: 0; -webkit-appearance: none; font-family: inherit;
         }
-        .edit-input-v2:focus { border-color: #3b82f6; }
-        .btn-micro-save {
-          min-height: 44px; min-width: 44px;
-          padding: 0 12px; border-radius: 8px; font-size: 16px;
-          cursor: pointer; background: rgba(16,185,129,0.15);
-          color: #10b981; border: 1px solid rgba(16,185,129,0.2);
-          -webkit-tap-highlight-color: transparent;
-          touch-action: manipulation;
+        .ic-inp:focus { border-color: #3b82f6; }
+        .ic-ok {
+          height: 42px; min-width: 42px; padding: 0 12px; border-radius: 10px;
+          background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.2);
+          cursor: pointer; font-size: 16px; flex-shrink: 0;
+          -webkit-tap-highlight-color: transparent; touch-action: manipulation;
         }
-        .btn-micro-cancel {
-          min-height: 44px; min-width: 44px;
-          padding: 0 12px; border-radius: 8px; font-size: 16px;
-          cursor: pointer; background: transparent;
-          color: #6b7280; border: 1px solid #1f2937;
-          -webkit-tap-highlight-color: transparent;
-          touch-action: manipulation;
+        .ic-cx {
+          height: 42px; min-width: 42px; padding: 0 12px; border-radius: 10px;
+          background: transparent; color: #6b7280; border: 1px solid #1f2937;
+          cursor: pointer; font-size: 16px; flex-shrink: 0;
+          -webkit-tap-highlight-color: transparent; touch-action: manipulation;
         }
-        .btn-toggle-card {
-          padding: 11px 16px; border-radius: 20px; font-size: 15px; font-weight: 600;
-          cursor: pointer; flex-shrink: 0;
-          -webkit-tap-highlight-color: transparent; white-space: nowrap;
-          touch-action: manipulation;
-          transition: all 150ms ease;
-          border: 1px solid rgba(16,185,129,0.35);
-          background: rgba(16,185,129,0.08);
-          color: #10b981;
-          letter-spacing: 0.2px;
+        .ic-tap {
+          background: none; border: none; cursor: pointer; padding: 0;
+          text-align: left; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
         }
-        .btn-toggle-card.done {
-          border-color: rgba(16,185,129,0.4);
-          background: rgba(16,185,129,0.12);
-          color: #34d399;
+        .ic-sel {
+          background: #0b0f19; border: 1px solid #374151; border-radius: 10px;
+          padding: 10px 30px 10px 12px; font-size: 14px; color: #f9fafb;
+          outline: none; -webkit-appearance: none; appearance: none; cursor: pointer; flex: 1;
         }
-        .btn-toggle-card:active { transform: scale(0.92); }
-        .btn-delete-card {
-          width: 46px; height: 46px; border-radius: 8px; border: none;
-          background: rgba(239,68,68,0.07); color: #f87171; font-size: 20px;
+        .ic-sel:focus { border-color: #3b82f6; }
+        .ic-mini-btn {
+          width: 28px; height: 28px; border-radius: 7px; border: none;
           cursor: pointer; display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0; -webkit-tap-highlight-color: transparent;
-          touch-action: manipulation;
-          transition: background 150ms ease;
-        }
-        .btn-delete-card:active { background: rgba(239,68,68,0.18); }
-        .editable-tap {
-          background: none; border: none; cursor: pointer; padding: 1px 0;
-          text-align: left; width: 100%; -webkit-tap-highlight-color: transparent;
-          touch-action: manipulation;
-        }
-        .price-chip-card {
-          display: inline-flex; align-items: center; gap: 3px;
-          font-size: 14px; color: #10b981;
-          background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.18);
-          border-radius: 20px; padding: 5px 12px; cursor: pointer;
-          -webkit-tap-highlight-color: transparent; touch-action: manipulation;
-          white-space: nowrap;
-        }
-        .add-price-tap-card {
-          font-size: 14px; color: #4b5563; background: none;
-          border: 1px dashed #1f2937; border-radius: 20px;
-          padding: 5px 12px; cursor: pointer;
-          -webkit-tap-highlight-color: transparent; touch-action: manipulation;
-        }
-        .add-price-tap-card:active { border-color: #10b981; color: #10b981; }
-        .store-badge {
-          display: inline-flex; align-items: center; gap: 3px;
-          font-size: 14px; color: #60a5fa;
-          background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);
-          border-radius: 20px; padding: 5px 12px;
-          white-space: nowrap;
+          flex-shrink: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+          font-size: 13px; transition: background 120ms ease;
         }
       `}</style>
 
-      {/* Toggle — oculto mientras se edita */}
+      {/* Círculo de toggle — 1 toque para marcar comprado */}
       {!editingField && (
         <button
           type="button"
-          className={`btn-toggle-card ${p ? "done" : ""}`}
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          style={{
+            width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0, marginTop: "3px",
+            border: p ? "none" : "2px solid #374151",
+            background: p ? "#10b981" : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", WebkitTapHighlightColor: "transparent",
+            touchAction: "manipulation", transition: "all 150ms ease",
+          }}
         >
-          {p ? "✓ Listo" : "Comprar"}
+          {p && <span style={{ color: "#fff", fontSize: "12px", fontWeight: 700, lineHeight: 1 }}>✓</span>}
         </button>
       )}
 
-      {/* Contenido */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "3px" }}>
+      {/* Bloque de contenido */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "5px" }}>
 
-        {/* Nombre */}
+        {/* Nombre del producto */}
         {editingField === "name" ? (
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <input type="text" className="edit-input-v2" value={editingName}
+          <div style={{ display: "flex", gap: "8px" }}>
+            <input type="text" className="ic-inp" value={editingName}
               onChange={(e) => setEditingName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
               autoFocus />
-            <button type="button" className="btn-micro-save" onClick={saveEdit}>✓</button>
-            <button type="button" className="btn-micro-cancel" onClick={cancelEdit}>✕</button>
+            <button type="button" className="ic-ok" onClick={saveEdit}>✓</button>
+            <button type="button" className="ic-cx" onClick={cancelEdit}>✕</button>
           </div>
         ) : (
-          <button className="editable-tap" type="button" onClick={(e) => { e.stopPropagation(); startEdit("name"); }}>
+          <button type="button" className="ic-tap"
+            onClick={(e) => { e.stopPropagation(); startEdit("name"); }}
+            style={{ display: "block", width: "100%" }}>
             <span style={{
-              fontSize: "19px", fontWeight: 600, lineHeight: 1.3,
-              color: p ? "#9ca3af" : "#f9fafb",
+              fontSize: "18px", fontWeight: 600, color: p ? "#9ca3af" : "#f9fafb",
               textDecoration: p ? "line-through" : "none",
-              textDecorationColor: "rgba(156,163,175,0.5)",
+              textDecorationColor: "rgba(107,114,128,0.4)",
+              display: "block", lineHeight: 1.3,
             }}>
               {item.name}
             </span>
           </button>
         )}
 
-        {/* Cantidad + quién agregó */}
-        {editingField === "quantity" ? (
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <input type="text" className="edit-input-v2" value={editingQuantity}
-              onChange={(e) => setEditingQuantity(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-              style={{ maxWidth: "140px" }} autoFocus />
-            <button type="button" className="btn-micro-save" onClick={saveEdit}>✓</button>
-            <button type="button" className="btn-micro-cancel" onClick={cancelEdit}>✕</button>
-          </div>
-        ) : (
-          <button className="editable-tap" type="button" onClick={(e) => { e.stopPropagation(); startEdit("quantity"); }}>
-            <span style={{ fontSize: "15px", color: p ? "#6b7280" : "#9ca3af", lineHeight: 1.4 }}>
-              {item.quantity || "Sin cantidad"} · {item.addedByName || "Alguien"}
-            </span>
-          </button>
-        )}
-
-        {/* Fechas */}
-        {!editingField && (item.createdAt || item.purchasedAt) && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "1px" }}>
-            {item.createdAt && (
-              <span style={{ fontSize: "11px", color: "#4b5563" }}>
-                Agregado: {fmtDate(item.createdAt)}
-              </span>
-            )}
-            {item.purchasedAt && (
-              <>
-                <span style={{ fontSize: "11px", color: "#374151" }}>·</span>
-                <span style={{ fontSize: "11px", color: "#10b981" }}>
-                  Comprado: {fmtDate(item.purchasedAt)}
-                </span>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Precio + tienda en la misma fila */}
+        {/* Precio + Tienda */}
         {editingField === "price" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "2px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <div style={{ display: "flex", gap: "4px" }}>
               {(["unit", "total"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setEditingPriceMode(mode)}
-                  style={{
-                    flex: 1, padding: "5px 0", borderRadius: "6px", fontSize: "11px",
-                    cursor: "pointer", border: "1px solid",
-                    borderColor: editingPriceMode === mode ? "#3b82f6" : "#1f2937",
-                    background: editingPriceMode === mode ? "rgba(59,130,246,0.15)" : "transparent",
-                    color: editingPriceMode === mode ? "#60a5fa" : "#6b7280",
-                    transition: "all 120ms ease",
-                  }}
-                >
+                <button key={mode} type="button" onClick={() => setEditingPriceMode(mode)} style={{
+                  flex: 1, padding: "6px 0", borderRadius: "8px", fontSize: "12px", cursor: "pointer",
+                  border: `1px solid ${editingPriceMode === mode ? "#3b82f6" : "#1f2937"}`,
+                  background: editingPriceMode === mode ? "rgba(59,130,246,0.12)" : "transparent",
+                  color: editingPriceMode === mode ? "#60a5fa" : "#6b7280",
+                }}>
                   {mode === "unit" ? "Por unidad" : "Total"}
                 </button>
               ))}
             </div>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <input type="number" inputMode="decimal" className="edit-input-v2" placeholder="Precio"
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input type="number" inputMode="decimal" className="ic-inp" placeholder="Precio"
                 value={editingPrice} onChange={(e) => setEditingPrice(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-                style={{ maxWidth: "130px" }} autoFocus />
-              <button type="button" className="btn-micro-save" onClick={saveEdit}>✓</button>
-              <button type="button" className="btn-micro-cancel" onClick={cancelEdit}>✕</button>
+                style={{ maxWidth: "140px" }} autoFocus />
+              <button type="button" className="ic-ok" onClick={saveEdit}>✓</button>
+              <button type="button" className="ic-cx" onClick={cancelEdit}>✕</button>
             </div>
           </div>
+        ) : editingField === "store" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ position: "relative", flex: 1 }}>
+                <select className="ic-sel" value={editingStore}
+                  onChange={(e) => { setEditingStore(e.target.value); if (e.target.value !== "Otro") setEditingStoreCustom(""); }}
+                  autoFocus>
+                  <option value="">Sin tienda</option>
+                  {STORE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <span style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", color: "#4b5563", pointerEvents: "none", fontSize: "10px" }}>▼</span>
+              </div>
+              <button type="button" className="ic-ok" onClick={saveEdit}>✓</button>
+              <button type="button" className="ic-cx" onClick={cancelEdit}>✕</button>
+            </div>
+            {editingStore === "Otro" && (
+              <input type="text" className="ic-inp" placeholder="Nombre de la tienda"
+                value={editingStoreCustom} onChange={(e) => setEditingStoreCustom(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                autoFocus />
+            )}
+          </div>
         ) : (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", alignItems: "center", marginTop: "1px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+            {/* Precio — elemento dominante junto al nombre */}
             {item.price !== undefined && item.price > 0 ? (
-              <button className="price-chip-card" type="button" onClick={(e) => { e.stopPropagation(); startEdit("price"); }}>
-                💰 {formatPrice(item.price)}{item.priceMode === "unit" ? " /u" : " total"}
+              <button type="button" className="ic-tap"
+                onClick={(e) => { e.stopPropagation(); startEdit("price"); }}>
+                <span style={{ fontSize: "16px", fontWeight: 600, color: "#10b981" }}>
+                  {formatPrice(item.price)}{item.priceMode === "unit" ? " /u" : ""}
+                </span>
               </button>
             ) : (
-              <button className="add-price-tap-card" type="button" onClick={(e) => { e.stopPropagation(); startEdit("price"); }}>
-                + precio
+              <button type="button" className="ic-tap"
+                onClick={(e) => { e.stopPropagation(); startEdit("price"); }}>
+                <span style={{ fontSize: "12px", color: "#374151" }}>+ precio</span>
               </button>
             )}
-            {item.store && (
-              <span className="store-badge">🛒 {item.store}</span>
+            {/* Tienda — chip secundario */}
+            {item.store ? (
+              <button type="button" className="ic-tap"
+                onClick={(e) => { e.stopPropagation(); startEdit("store"); }}>
+                <span style={{
+                  fontSize: "13px", color: "#60a5fa",
+                  background: "rgba(59,130,246,0.08)", borderRadius: "6px",
+                  padding: "3px 8px", display: "inline-block",
+                }}>
+                  🛒 {item.store}
+                </span>
+              </button>
+            ) : (
+              <button type="button" className="ic-tap"
+                onClick={(e) => { e.stopPropagation(); startEdit("store"); }}>
+                <span style={{ fontSize: "12px", color: "#374151" }}>+ tienda</span>
+              </button>
             )}
+          </div>
+        )}
+
+        {/* Editor de cantidad */}
+        {editingField === "quantity" && (
+          <div style={{ display: "flex", gap: "8px" }}>
+            <input type="text" className="ic-inp" value={editingQuantity}
+              onChange={(e) => setEditingQuantity(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+              placeholder="Cantidad" style={{ maxWidth: "160px" }} autoFocus />
+            <button type="button" className="ic-ok" onClick={saveEdit}>✓</button>
+            <button type="button" className="ic-cx" onClick={cancelEdit}>✕</button>
+          </div>
+        )}
+
+        {/* Meta: cantidad · usuario · fecha + acciones discretas */}
+        {!editingField && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginTop: "1px" }}>
+            <button type="button" className="ic-tap"
+              onClick={(e) => { e.stopPropagation(); startEdit("quantity"); }}>
+              <span style={{ fontSize: "13px", color: "#9ca3af", lineHeight: 1.4 }}>
+                {[
+                  item.quantity || null,
+                  item.addedByName || null,
+                  item.createdAt ? fmtDate(item.createdAt) : null,
+                ].filter(Boolean).join(" · ")}
+                {item.purchasedAt && (
+                  <span style={{ color: "rgba(16,185,129,0.6)" }}> · ✓ {fmtDate(item.purchasedAt)}</span>
+                )}
+              </span>
+            </button>
+            {/* Acciones: info + borrar (discreta, baja prioridad) */}
+            <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+              <button type="button" className="ic-mini-btn"
+                onClick={(e) => { e.stopPropagation(); onOpenDetail(); }}
+                style={{ background: "rgba(59,130,246,0.08)", color: "#4b8df8" }}>
+                ℹ
+              </button>
+              <button type="button" className="ic-mini-btn"
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                style={{ background: "rgba(239,68,68,0.06)", color: "#f87171" }}>
+                🗑
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Imagen */}
+      {/* Imagen — terciaria, pequeña */}
       {item.imageUrl && !editingField && (
         <div style={{
-          width: "48px", height: "48px", borderRadius: "10px", flexShrink: 0,
-          border: p ? "1px solid rgba(16,185,129,0.2)" : "1px solid #1f2937",
-          background: "#0b0f19", overflow: "hidden", opacity: p ? 0.7 : 1,
-          display: "flex", alignItems: "center", justifyContent: "center",
+          width: "44px", height: "44px", borderRadius: "10px", flexShrink: 0,
+          border: "1px solid #1f2937", background: "#0b0f19", overflow: "hidden",
+          opacity: p ? 0.45 : 1, display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-          />
-        </div>
-      )}
-
-      {/* Detalle + Borrar — ocultos mientras se edita */}
-      {!editingField && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onOpenDetail(); }}
-            aria-label="Ver detalle"
-            style={{
-              width: "46px", height: "46px", borderRadius: "8px", border: "1px solid #1f2937",
-              background: "rgba(59,130,246,0.07)", color: "#60a5fa", fontSize: "20px",
-              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0, WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            ℹ
-          </button>
-          <button
-            type="button"
-            className="btn-delete-card"
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            aria-label="Eliminar"
-          >
-            🗑
-          </button>
+          <img src={item.imageUrl} alt={item.name}
+            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
         </div>
       )}
     </div>

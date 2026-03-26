@@ -5,6 +5,9 @@ import type { GroupType, ShoppingItemType } from "../types";
 import AddItemForm from "../componentes/AddItemFor";
 import ItemCard from "../componentes/ItemCard";
 import ItemDetailModal from "../componentes/ItemDetailModal";
+import TemplatesModal from "../componentes/TemplatesModal";
+import FavoritesModal from "../componentes/FavoritesModal";
+import { useTemplatesFavorites } from "../hooks/useTemplatesFavorites";
 
 type FilterType = "pending" | "purchased";
 
@@ -25,14 +28,22 @@ export default function GroupDetail() {
   const {
     myGroups, isLoading,
     addItemToGroup, toggleItemPurchased, deleteItemFromGroup,
-    updateItemQuantity, updateItemName, updateItemPrice, updateItemNotes, clearPurchasedItems,
+    updateItemQuantity, updateItemName, updateItemPrice, updateItemStore, updateItemNotes, clearPurchasedItems,
+    updateGroupName, addItemsFromTemplate, setItemsFromTemplate,
+    createGroupTemplate, updateGroupTemplate, deleteGroupTemplate,
   } = useGroups();
+
+  const { favorites, addFavorite, removeFavorite } = useTemplatesFavorites();
 
   const [filter, setFilter] = useState<FilterType>("pending");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [clearConfirm, setClearConfirm] = useState(false);
   const [detailItemId, setDetailItemId] = useState<string | null>(null);
+  const [editingGroupName, setEditingGroupName] = useState(false);
+  const [groupNameValue, setGroupNameValue] = useState("");
 
   const group = useMemo(() => myGroups.find((g: GroupType) => g.id === id), [myGroups, id]);
 
@@ -115,133 +126,191 @@ export default function GroupDetail() {
         .detail-root {
           min-height: 100vh;
           background: #0b0f19;
-          background-image: radial-gradient(ellipse 120% 60% at 50% -5%, rgba(59,130,246,0.18), transparent);
-          padding: 28px 16px 100px;
+          padding: 24px 16px 100px;
         }
-        .filter-btn {
-          padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
-          cursor: pointer; border: none; transition: all 150ms ease;
-          -webkit-tap-highlight-color: transparent; min-height: 38px; flex: 1;
+        .tab-btn {
+          flex: 1; padding: 10px 0; font-size: 15px; font-weight: 500;
+          cursor: pointer; border: none; background: transparent;
+          -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+          transition: color 150ms ease; border-bottom: 2px solid transparent;
         }
-        .filter-btn.active { background: #f9fafb; color: #0b0f19; }
-        .filter-btn.inactive { background: #111827; color: #6b7280; border: 1px solid #1f2937; }
-        .filter-btn.inactive:active { background: #161e2e; color: #f9fafb; }
+        .tab-btn.active { color: #f9fafb; border-bottom-color: #3b82f6; }
+        .tab-btn.inactive { color: #4b5563; }
+        .tab-btn.inactive:active { color: #9ca3af; }
         .store-chip {
-          padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+          padding: 5px 12px; border-radius: 20px; font-size: 12px;
           cursor: pointer; border: 1px solid; white-space: nowrap;
           -webkit-tap-highlight-color: transparent; touch-action: manipulation;
           transition: all 150ms ease; flex-shrink: 0;
         }
-        .store-chip.active { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
+        .store-chip.active { background: rgba(59,130,246,0.1); color: #60a5fa; border-color: rgba(59,130,246,0.25); }
         .store-chip.inactive { background: transparent; color: #6b7280; border-color: #1f2937; }
         .back-btn {
           background: none; border: none; cursor: pointer; font-size: 13px;
           color: #4b5563; padding: 0; display: flex; align-items: center; gap: 6px;
           -webkit-tap-highlight-color: transparent; min-height: 44px;
         }
-        .back-btn:active { color: #f9fafb; }
+        .back-btn:active { color: #9ca3af; }
         .share-btn {
-          min-height: 40px; padding: 0 14px; border-radius: 10px; font-size: 13px;
-          font-weight: 500; cursor: pointer; background: rgba(59,130,246,0.1);
-          color: #3b82f6; border: 1px solid rgba(59,130,246,0.2);
-          -webkit-tap-highlight-color: transparent;
+          min-height: 36px; padding: 0 12px; border-radius: 8px; font-size: 13px;
+          cursor: pointer; background: transparent; color: #4b5563;
+          border: 1px solid #1f2937; -webkit-tap-highlight-color: transparent;
+          display: flex; align-items: center; gap: 6px;
         }
-        .share-btn:active { background: rgba(59,130,246,0.2); }
+        .share-btn:active { color: #f9fafb; border-color: #374151; }
         .clear-btn {
-          min-height: 38px; padding: 0 14px; border-radius: 8px;
+          min-height: 34px; padding: 0 12px; border-radius: 8px;
           font-size: 12px; font-weight: 500; cursor: pointer;
           -webkit-tap-highlight-color: transparent; white-space: nowrap;
         }
         .clear-btn.normal { background: transparent; color: #6b7280; border: 1px solid #1f2937; }
-        .clear-btn.confirm { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
-        .clear-btn:active { transform: scale(0.96); }
+        .clear-btn.confirm { background: rgba(239,68,68,0.08); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
+        .clear-btn:active { opacity: 0.7; }
       `}</style>
 
       <main className="detail-root">
         <div style={{ maxWidth: "480px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px" }}>
 
-          {/* Back */}
-          <button className="back-btn" onClick={() => navigate("/groups")}>← Mis grupos</button>
-
-          {/* Header */}
-          <div>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
-              <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#f9fafb", margin: 0, flex: 1 }}>{group.name}</h1>
-              <button className="share-btn" onClick={() => shareGroupCode(group.name, group.code ?? "")}>
-                Compartir 🔗
-              </button>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "12px", color: "#4b5563" }}>
-                Código: <span style={{ color: "#3b82f6", fontWeight: 600, letterSpacing: "1px", cursor: "pointer" }}
-                  onClick={() => shareGroupCode(group.name, group.code ?? "")}>{group.code}</span>
-              </span>
-              <span style={{ fontSize: "12px", color: "#374151" }}>·</span>
-              <span style={{ fontSize: "12px", color: "#4b5563" }}>
-                {pendingCount} pendiente{pendingCount !== 1 ? "s" : ""}
-              </span>
-              {purchasedCount > 0 && <>
-                <span style={{ fontSize: "12px", color: "#374151" }}>·</span>
-                <span style={{ fontSize: "12px", color: "#10b981" }}>{purchasedCount} comprado{purchasedCount !== 1 ? "s" : ""}</span>
-              </>}
-            </div>
-
-            {/* Miembros */}
-            {memberNamesDisplay && (
-              <p style={{ fontSize: "12px", color: "#4b5563", margin: "6px 0 0", lineHeight: 1.4 }}>
-                👥 {memberNamesDisplay}
-              </p>
-            )}
+          {/* Back + Share en la misma fila */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <button className="back-btn" onClick={() => navigate("/groups")}>← Mis grupos</button>
+            <button className="share-btn" onClick={() => shareGroupCode(group.name, group.code ?? "")}>
+              🔗 Compartir
+            </button>
           </div>
 
-          {/* Total estimado */}
-          {(totalEstimado !== null || totalComprado !== null) && (
-            <div style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: "14px", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                {totalEstimado !== null && (
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>
-                    Total estimado: <span style={{ color: "#f9fafb", fontWeight: 600 }}>{fmt(totalEstimado)}</span>
-                  </span>
-                )}
-                {totalComprado !== null && (
-                  <span style={{ fontSize: "12px", color: "#10b981" }}>
-                    Ya compraste: <span style={{ fontWeight: 600 }}>{fmt(totalComprado)}</span>
-                  </span>
-                )}
+          {/* Header — nombre centrado y editable */}
+          <div style={{ textAlign: "center" }}>
+            {editingGroupName ? (
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "center", marginBottom: "6px" }}>
+                <input
+                  type="text"
+                  value={groupNameValue}
+                  onChange={(e) => setGroupNameValue(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter" && groupNameValue.trim()) {
+                      await updateGroupName(group.id, groupNameValue.trim());
+                      setEditingGroupName(false);
+                    }
+                    if (e.key === "Escape") setEditingGroupName(false);
+                  }}
+                  autoFocus
+                  style={{
+                    background: "#111827", border: "1px solid #374151", borderRadius: "10px",
+                    padding: "10px 14px", fontSize: "22px", fontWeight: 700, color: "#f9fafb",
+                    outline: "none", textAlign: "center", width: "100%", maxWidth: "300px",
+                  }}
+                />
+                <button
+                  onClick={async () => { if (groupNameValue.trim()) { await updateGroupName(group.id, groupNameValue.trim()); setEditingGroupName(false); } }}
+                  style={{ height: "44px", minWidth: "44px", borderRadius: "10px", border: "none", background: "rgba(16,185,129,0.12)", color: "#10b981", fontSize: "18px", cursor: "pointer" }}
+                >✓</button>
+                <button
+                  onClick={() => setEditingGroupName(false)}
+                  style={{ height: "44px", minWidth: "44px", borderRadius: "10px", border: "1px solid #1f2937", background: "transparent", color: "#6b7280", fontSize: "18px", cursor: "pointer" }}
+                >✕</button>
               </div>
-              <span style={{ fontSize: "24px" }}>🧮</span>
+            ) : (
+              <h1
+                onClick={() => { setGroupNameValue(group.name); setEditingGroupName(true); }}
+                style={{ fontSize: "28px", fontWeight: 700, color: "#f9fafb", margin: "0 0 6px", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
+              >
+                {group.name} <span style={{ fontSize: "16px", color: "rgba(255,255,255,0.25)" }}>✎</span>
+              </h1>
+            )}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
+                onClick={() => shareGroupCode(group.name, group.code ?? "")}>
+                {group.code}
+              </span>
+              <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.2)" }}>·</span>
+              <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)" }}>
+                {pendingCount} pendiente{pendingCount !== 1 ? "s" : ""}
+                {purchasedCount > 0 && ` · ${purchasedCount} comprado${purchasedCount !== 1 ? "s" : ""}`}
+              </span>
+              {memberNamesDisplay && (
+                <>
+                  <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.2)" }}>·</span>
+                  <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)" }}>{memberNamesDisplay}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Total estimado — limpio, sin card */}
+          {(totalEstimado !== null || totalComprado !== null) && (
+            <div style={{ paddingLeft: "2px", display: "flex", flexDirection: "column", gap: "2px" }}>
+              {totalEstimado !== null && (
+                <span style={{ fontSize: "14px", color: "#9ca3af" }}>
+                  Total estimado <span style={{ color: "#f9fafb", fontWeight: 700, fontSize: "22px", marginLeft: "6px" }}>{fmt(totalEstimado)}</span>
+                </span>
+              )}
+              {totalComprado !== null && (
+                <span style={{ fontSize: "12px", color: "rgba(16,185,129,0.7)" }}>
+                  Ya compraste <span style={{ fontWeight: 600, color: "#10b981" }}>{fmt(totalComprado)}</span>
+                </span>
+              )}
             </div>
           )}
 
-          {/* Botón agregar */}
+          {/* CTA principal */}
           <button
             onClick={() => setShowAddModal(true)}
             style={{
-              width: "100%", minHeight: "50px", borderRadius: "12px",
+              width: "100%", minHeight: "46px", borderRadius: "12px",
               fontSize: "15px", fontWeight: 600, cursor: "pointer",
               background: "#3b82f6", color: "#fff", border: "none",
               display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               WebkitTapHighlightColor: "transparent",
-              transition: "background 150ms ease",
+              transition: "opacity 150ms ease",
+              letterSpacing: "0.1px",
             }}
           >
             + Agregar producto
           </button>
 
-          {/* Filtro por estado */}
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: "6px", flex: 1 }}>
+          {/* Acciones secundarias: Plantillas + Favoritos */}
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => setShowTemplates(true)}
+              style={{
+                flex: 1, minHeight: "38px", borderRadius: "10px", fontSize: "13px", fontWeight: 500,
+                cursor: "pointer", background: "transparent", color: "#9ca3af",
+                border: "1px solid #1f2937", WebkitTapHighlightColor: "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
+              }}
+            >
+              📋 Plantillas
+            </button>
+            <button
+              onClick={() => setShowFavorites(true)}
+              style={{
+                flex: 1, minHeight: "38px", borderRadius: "10px", fontSize: "13px", fontWeight: 500,
+                cursor: "pointer", background: "transparent", color: "#9ca3af",
+                border: "1px solid #1f2937", WebkitTapHighlightColor: "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
+              }}
+            >
+              ⭐ Favoritos
+            </button>
+          </div>
+
+          {/* Tabs — estilo underline, sin fondos pesados */}
+          <div>
+            <div style={{ display: "flex", borderBottom: "1px solid #1f2937" }}>
               {(["pending", "purchased"] as FilterType[]).map((f) => (
-                <button key={f} className={`filter-btn ${filter === f ? "active" : "inactive"}`} onClick={() => setFilter(f)}>
+                <button key={f} className={`tab-btn ${filter === f ? "active" : "inactive"}`} onClick={() => setFilter(f)}>
                   {f === "pending" ? `Pendientes (${pendingCount})` : `Comprados (${purchasedCount})`}
                 </button>
               ))}
             </div>
-            {purchasedCount > 0 && (
-              <button className={`clear-btn ${clearConfirm ? "confirm" : "normal"}`}
-                onClick={handleClearPurchased} onBlur={() => setClearConfirm(false)}>
-                {clearConfirm ? "¿Seguro?" : "Limpiar ✓"}
-              </button>
+            {purchasedCount > 0 && filter === "purchased" && (
+              <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "10px" }}>
+                <button className={`clear-btn ${clearConfirm ? "confirm" : "normal"}`}
+                  onClick={handleClearPurchased} onBlur={() => setClearConfirm(false)}>
+                  {clearConfirm ? "¿Seguro?" : "Limpiar ✓"}
+                </button>
+              </div>
             )}
           </div>
 
@@ -287,6 +356,7 @@ export default function GroupDetail() {
                   onUpdateName={(name) => updateItemName(group.id, item.id, name)}
                   onUpdateQuantity={(quantity) => updateItemQuantity(group.id, item.id, quantity)}
                   onUpdatePrice={(price, priceMode) => updateItemPrice(group.id, item.id, price, priceMode)}
+                  onUpdateStore={(store) => updateItemStore(group.id, item.id, store)}
                   onOpenDetail={() => setDetailItemId(item.id)}
                 />
               ))
@@ -302,6 +372,39 @@ export default function GroupDetail() {
           item={detailItem}
           onClose={() => setDetailItemId(null)}
           onUpdateNotes={(notes) => updateItemNotes(group.id, detailItem.id, notes)}
+          isFavorite={favorites.some((f) => f.name.toLowerCase() === detailItem.name.toLowerCase())}
+          onSaveAsFavorite={(item) => addFavorite({
+            name: item.name, quantity: item.quantity,
+            price: item.price, priceMode: item.priceMode,
+            store: item.store, imageUrl: item.imageUrl,
+          })}
+        />
+      )}
+
+      {/* Modal Plantillas */}
+      {showTemplates && (
+        <TemplatesModal
+          templates={group.templates ?? []}
+          currentItems={group.items}
+          onClose={() => setShowTemplates(false)}
+          onAddItems={(items) => addItemsFromTemplate(group.id, items)}
+          onReplaceItems={(items) => setItemsFromTemplate(group.id, items)}
+          onCreateTemplate={(name, items) => createGroupTemplate(group.id, name, items)}
+          onUpdateTemplate={(tplId, changes) => updateGroupTemplate(group.id, tplId, changes)}
+          onDeleteTemplate={(tplId) => deleteGroupTemplate(group.id, tplId)}
+        />
+      )}
+
+      {/* Modal Favoritos */}
+      {showFavorites && (
+        <FavoritesModal
+          favorites={favorites}
+          currentItems={group.items}
+          onClose={() => setShowFavorites(false)}
+          onAddItem={async (fav) => {
+            await addItemToGroup(group.id, fav.name, fav.quantity, fav.price, fav.store, fav.imageUrl, fav.priceMode);
+          }}
+          onRemoveFavorite={removeFavorite}
         />
       )}
 

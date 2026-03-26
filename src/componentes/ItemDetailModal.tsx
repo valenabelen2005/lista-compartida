@@ -5,9 +5,11 @@ interface Props {
   item: ShoppingItemType;
   onClose: () => void;
   onUpdateNotes: (notes: string | undefined) => Promise<void>;
+  onSaveAsFavorite: (item: ShoppingItemType) => void;
+  isFavorite: boolean;
 }
 
-export default function ItemDetailModal({ item, onClose, onUpdateNotes }: Props) {
+export default function ItemDetailModal({ item, onClose, onUpdateNotes, onSaveAsFavorite, isFavorite }: Props) {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState(item.notes ?? "");
   const [saving, setSaving] = useState(false);
@@ -209,6 +211,20 @@ export default function ItemDetailModal({ item, onClose, onUpdateNotes }: Props)
               <p style={{ fontSize: "13px", color: "#374151", margin: 0 }}>Sin notas</p>
             )}
           </div>
+          {/* Guardar como favorito */}
+          <button
+            onClick={() => onSaveAsFavorite(item)}
+            style={{
+              width: "100%", minHeight: "42px", borderRadius: "12px",
+              fontSize: "14px", fontWeight: 500, cursor: isFavorite ? "default" : "pointer",
+              background: isFavorite ? "rgba(251,191,36,0.06)" : "transparent",
+              color: isFavorite ? "#fbbf24" : "#6b7280",
+              border: `1px solid ${isFavorite ? "rgba(251,191,36,0.2)" : "#1f2937"}`,
+              transition: "all 150ms ease",
+            }}
+          >
+            {isFavorite ? "⭐ En favoritos" : "☆ Guardar en favoritos"}
+          </button>
         </div>
       </div>
     </div>

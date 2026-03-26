@@ -1,20 +1,34 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useGroups } from "../context/GroupsContext";
 
 export default function Home() {
   const navigate = useNavigate();
   const { user, isGuest, loginWithGoogle, logout } = useAuth();
+  const { myGroups, isLoading } = useGroups();
   const [loginLoading, setLoginLoading] = useState(false);
+
+  // Usuarios con grupos → directo a la lista (sin paso extra)
+  useEffect(() => {
+    if (!isLoading && myGroups.length > 0) {
+      navigate("/groups", { replace: true });
+    }
+  }, [isLoading, myGroups.length, navigate]);
 
   const handleLogin = async () => {
     setLoginLoading(true);
-    try {
-      await loginWithGoogle();
-    } finally {
-      setLoginLoading(false);
-    }
+    try { await loginWithGoogle(); } finally { setLoginLoading(false); }
   };
+
+  // Cargando grupos
+  if (isLoading) {
+    return (
+      <main style={{ minHeight: "100vh", background: "#0b0f19", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "#374151", fontSize: "14px" }}>Cargando…</p>
+      </main>
+    );
+  }
 
   return (
     <>
@@ -22,143 +36,96 @@ export default function Home() {
         .home-root {
           min-height: 100vh;
           background: #0b0f19;
-          background-image: radial-gradient(ellipse 160% 60% at 50% -5%, rgba(59,130,246,0.18), transparent);
+          background-image: radial-gradient(ellipse 120% 60% at 50% -5%, rgba(59,130,246,0.13), transparent);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           padding: 24px;
         }
-        .btn {
-          width: 100%;
-          padding: 13px 16px;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          border: none;
-          transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
-          outline: none;
+        .h-btn-primary {
+          width: 100%; min-height: 52px; border-radius: 14px;
+          font-size: 16px; font-weight: 600; cursor: pointer;
+          background: #3b82f6; color: #fff; border: none;
+          transition: transform 150ms ease, background 150ms ease;
+          -webkit-tap-highlight-color: transparent;
         }
-        .btn:active { transform: scale(0.97); }
-        .btn-primary {
-          background: #3b82f6;
-          color: #fff;
-          box-shadow: 0 0 0 0 rgba(59,130,246,0);
+        .h-btn-primary:active { transform: scale(0.97); background: #2563eb; }
+        .h-btn-ghost {
+          width: 100%; min-height: 48px; border-radius: 14px;
+          font-size: 15px; font-weight: 500; cursor: pointer;
+          background: transparent; color: #d1d5db; border: 1px solid #1f2937;
+          transition: transform 150ms ease, background 150ms ease;
+          -webkit-tap-highlight-color: transparent;
         }
-        .btn-primary:hover {
-          background: #2563eb;
-          transform: scale(1.02);
-          box-shadow: 0 4px 20px rgba(59,130,246,0.35);
-        }
-        .btn-primary:focus-visible {
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.5);
-        }
-        .btn-ghost {
-          background: transparent;
-          color: #f9fafb;
-          border: 1px solid #1f2937 !important;
-        }
-        .btn-ghost:hover {
-          background: #161e2e;
-          transform: scale(1.01);
-          border-color: #374151 !important;
-        }
-        .btn-neutral {
-          background: #161e2e;
-          color: #f9fafb;
-        }
-        .btn-neutral:hover {
-          background: #1e2a3a;
-          transform: scale(1.01);
-        }
-        .profile-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 12px;
-          color: #4b5563;
-          transition: color 150ms ease;
-          padding: 8px;
-        }
-        .profile-btn:hover { color: #9ca3af; }
+        .h-btn-ghost:active { transform: scale(0.97); background: #111827; }
       `}</style>
 
       <main className="home-root">
-        <div style={{ width: "100%", maxWidth: "360px", display: "flex", flexDirection: "column", gap: "32px" }}>
+        <div style={{ width: "100%", maxWidth: "340px", display: "flex", flexDirection: "column", gap: "32px" }}>
 
-          {/* Header */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+          {/* Brand + primer mensaje */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
               <div style={{
-                width: "32px", height: "32px", borderRadius: "8px",
-                background: "rgba(59,130,246,0.15)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "16px",
+                width: "40px", height: "40px", borderRadius: "12px",
+                background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px",
               }}>🛒</div>
-              <span style={{ fontSize: "11px", fontWeight: 600, color: "#3b82f6", letterSpacing: "1px", textTransform: "uppercase" }}>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "#3b82f6", letterSpacing: "0.5px" }}>
                 Lista Compartida
               </span>
             </div>
-            <h1 style={{ fontSize: "30px", fontWeight: 700, color: "#f9fafb", margin: 0, lineHeight: 1.2, letterSpacing: "-0.5px" }}>
-              Compras en equipo,<br />sin fricción.
+            <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#f9fafb", margin: "0 0 8px", lineHeight: 1.25 }}>
+              Empezá tu primera<br />lista compartida
             </h1>
-            <p style={{ fontSize: "16px", color: "#9ca3af", margin: 0, marginTop: "4px" }}>
-              Crea un grupo, comparte el código, listo.
+            <p style={{ fontSize: "15px", color: "#6b7280", margin: 0 }}>
+              Crear un grupo tarda 10 segundos.
             </p>
           </div>
 
-          {/* Acciones */}
-          <div style={{
-            background: "#111827",
-            border: "1px solid #1f2937",
-            borderRadius: "16px",
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-          }}>
-            <button className="btn btn-primary" onClick={() => navigate("/create")}>
-              Crear un grupo nuevo
+          {/* Acciones principales */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <button className="h-btn-primary" onClick={() => navigate("/create")}>
+              Crear mi primer grupo
             </button>
-            <button className="btn btn-ghost" onClick={() => navigate("/join")}>
-              Unirse con código
-            </button>
-            <button className="btn btn-neutral" onClick={() => navigate("/groups")}>
-              Ver mis grupos
+            <button className="h-btn-ghost" onClick={() => navigate("/join")}>
+              Unirme con código
             </button>
           </div>
 
           {/* Banner invitado */}
           {isGuest && (
             <div style={{
-              background: "rgba(59,130,246,0.07)",
-              border: "1px solid rgba(59,130,246,0.18)",
-              borderRadius: "12px",
-              padding: "14px 16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
+              background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)",
+              borderRadius: "14px", padding: "16px",
+              display: "flex", flexDirection: "column", gap: "12px",
             }}>
-              <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af", lineHeight: 1.5 }}>
-                Estás en modo invitado. Los grupos se guardan solo en este dispositivo.
-              </p>
+              <div>
+                <p style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: 600, color: "#d1d5db" }}>
+                  Modo sin cuenta
+                </p>
+                <p style={{ margin: 0, fontSize: "13px", color: "#6b7280", lineHeight: 1.5 }}>
+                  Tus listas se guardan solo en este dispositivo. Con Google, las compartís y las tenés en todos tus teléfonos.
+                </p>
+              </div>
               <button
                 onClick={handleLogin}
                 disabled={loginLoading}
                 style={{
                   background: "#3b82f6", color: "#fff", border: "none",
-                  borderRadius: "8px", padding: "9px 14px", fontSize: "13px",
-                  fontWeight: 500, cursor: "pointer", opacity: loginLoading ? 0.6 : 1,
+                  borderRadius: "10px", padding: "10px 14px", fontSize: "14px",
+                  fontWeight: 600, cursor: "pointer", opacity: loginLoading ? 0.6 : 1,
+                  WebkitTapHighlightColor: "transparent",
                 }}
               >
-                {loginLoading ? "Iniciando sesión…" : "Iniciar sesión con Google →"}
+                {loginLoading ? "Iniciando sesión…" : "Conectar con Google"}
               </button>
               <button
-                onClick={() => { logout(); }}
+                onClick={() => logout()}
                 style={{
                   background: "transparent", color: "#4b5563", border: "none",
-                  padding: "4px", fontSize: "12px", cursor: "pointer", textDecoration: "underline",
+                  padding: "4px", fontSize: "12px", cursor: "pointer",
                 }}
               >
                 Salir del modo invitado
@@ -166,10 +133,17 @@ export default function Home() {
             </div>
           )}
 
-          {/* Perfil */}
-          {!isGuest && (
-            <button className="profile-btn" onClick={() => navigate("/profile")} style={{ textAlign: "center", fontSize: "16px", color: "#9ca3af" }}>
-              {user?.displayName ?? "Mi perfil"} →
+          {/* Perfil para usuarios logueados */}
+          {!isGuest && user && (
+            <button
+              onClick={() => navigate("/profile")}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                fontSize: "14px", color: "#6b7280", textAlign: "center",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              {user.displayName} · Perfil →
             </button>
           )}
 

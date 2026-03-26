@@ -22,7 +22,7 @@ import {
 import { db } from "../services/firebase";
 import { useAuth } from "./AuthContext";
 import { useNotifications } from "./NotificationContext";
-import type { GroupType, ShoppingItemType } from "../types";
+import type { GroupType, ShoppingItemType, TemplateItemType, TemplateType } from "../types";
 
 const GUEST_GROUPS_KEY = "lista-compartida-guest-groups";
 
@@ -43,6 +43,17 @@ function saveGuestGroups(groups: GroupType[]): void {
   localStorage.setItem(GUEST_GROUPS_KEY, JSON.stringify(groups));
 }
 
+function cleanTemplateItems(items: TemplateItemType[]): TemplateItemType[] {
+  return items.map(({ id, name, quantity, price, priceMode, store, imageUrl }) => {
+    const item: TemplateItemType = { id, name, quantity };
+    if (price !== undefined) item.price = price;
+    if (priceMode !== undefined) item.priceMode = priceMode;
+    if (store !== undefined) item.store = store;
+    if (imageUrl !== undefined) item.imageUrl = imageUrl;
+    return item;
+  });
+}
+
 interface GroupsContextType {
   myGroups: GroupType[];
   isLoading: boolean;
@@ -60,6 +71,12 @@ interface GroupsContextType {
   updateItemStore: (groupId: string, itemId: string, store: string | undefined) => Promise<void>;
   updateItemImage: (groupId: string, itemId: string, imageUrl: string | undefined) => Promise<void>;
   clearPurchasedItems: (groupId: string) => Promise<void>;
+  updateGroupName: (groupId: string, name: string) => Promise<void>;
+  addItemsFromTemplate: (groupId: string, templateItems: TemplateItemType[]) => Promise<void>;
+  setItemsFromTemplate: (groupId: string, templateItems: TemplateItemType[]) => Promise<void>;
+  createGroupTemplate: (groupId: string, name: string, items: TemplateItemType[]) => Promise<void>;
+  updateGroupTemplate: (groupId: string, templateId: string, changes: Partial<Pick<TemplateType, "name" | "items">>) => Promise<void>;
+  deleteGroupTemplate: (groupId: string, templateId: string) => Promise<void>;
 }
 
 const GroupsContext = createContext<GroupsContextType | undefined>(undefined);
@@ -142,6 +159,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
             members: d.members ?? [],
             memberNames: d.memberNames ?? {},
             items: (d.items ?? []) as ShoppingItemType[],
+            templates: (d.templates ?? []) as TemplateType[],
           };
         });
         setAllGroups(data);
@@ -465,6 +483,121 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
     [allGroups, isGuest, updateGuestGroupItems]
   );
 
+  const addItemsFromTemplate = useCallback(
+    async (groupId: string, templateItems: TemplateItemType[]) => {
+      const groups = isGuest ? guestGroups : allGroups;
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+      const existingNames = new Set(group.items.map((i) => i.name.toLowerCase()));
+      const newItems: ShoppingItemType[] = templateItems
+        .filter((ti) => !existingNames.has(ti.name.toLowerCase()))
+        .map((ti) => ({
+          id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          name: ti.name,
+          quantity: ti.quantity,
+          createdAt: Date.now(),
+          ...(ti.price !== undefined && ti.price > 0 ? { price: ti.price, priceMode: ti.priceMode ?? "unit" } : {}),
+          ...(ti.store ? { store: ti.store } : {}),
+          ...(ti.imageUrl ? { imageUrl: ti.imageUrl } : {}),
+          purchased: false,
+          addedBy: user?.uid ?? "guest",
+          addedByName: user?.displayName ?? "Vos",
+        }));
+      if (newItems.length === 0) return;
+      if (isGuest) {
+        updateGuestGroupItems(groupId, (items) => [...items, ...newItems]);
+        return;
+      }
+      await updateDoc(doc(db, "groups", groupId), { items: [...group.items, ...newItems] });
+    },
+    [allGroups, guestGroups, user, isGuest, updateGuestGroupItems]
+  );
+
+  const setItemsFromTemplate = useCallback(
+    async (groupId: string, templateItems: TemplateItemType[]) => {
+      const newItems: ShoppingItemType[] = templateItems.map((ti) => ({
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        name: ti.name,
+        quantity: ti.quantity,
+        createdAt: Date.now(),
+        ...(ti.price !== undefined && ti.price > 0 ? { price: ti.price, priceMode: ti.priceMode ?? "unit" } : {}),
+        ...(ti.store ? { store: ti.store } : {}),
+        ...(ti.imageUrl ? { imageUrl: ti.imageUrl } : {}),
+        purchased: false,
+        addedBy: user?.uid ?? "guest",
+        addedByName: user?.displayName ?? "Vos",
+      }));
+      if (isGuest) {
+        updateGuestGroupItems(groupId, () => newItems);
+        return;
+      }
+      await updateDoc(doc(db, "groups", groupId), { items: newItems });
+    },
+    [user, isGuest, updateGuestGroupItems]
+  );
+
+  const createGroupTemplate = useCallback(
+    async (groupId: string, name: string, items: TemplateItemType[]) => {
+      const newTemplate = {
+        id: `tpl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        name, items: cleanTemplateItems(items), createdAt: Date.now(),
+      };
+      const updateTemplates = (prev: GroupType[]) =>
+        prev.map((g) => g.id === groupId ? { ...g, templates: [...(g.templates ?? []), newTemplate] } : g);
+      if (isGuest) { updateGuestGroups(updateTemplates); return; }
+      const group = allGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      await updateDoc(doc(db, "groups", groupId), { templates: [...(group.templates ?? []), newTemplate] });
+    },
+    [allGroups, isGuest, updateGuestGroups]
+  );
+
+  const updateGroupTemplate = useCallback(
+    async (groupId: string, templateId: string, changes: Partial<Pick<TemplateType, "name" | "items">>) => {
+      const cleanedChanges = changes.items ? { ...changes, items: cleanTemplateItems(changes.items) } : changes;
+      const updater = (templates: TemplateType[]) =>
+        templates.map((t) => (t.id === templateId ? { ...t, ...cleanedChanges } : t));
+      if (isGuest) {
+        updateGuestGroups((prev) =>
+          prev.map((g) => g.id === groupId ? { ...g, templates: updater(g.templates ?? []) } : g)
+        );
+        return;
+      }
+      const group = allGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      await updateDoc(doc(db, "groups", groupId), { templates: updater(group.templates ?? []) });
+    },
+    [allGroups, isGuest, updateGuestGroups]
+  );
+
+  const deleteGroupTemplate = useCallback(
+    async (groupId: string, templateId: string) => {
+      if (isGuest) {
+        updateGuestGroups((prev) =>
+          prev.map((g) => g.id === groupId ? { ...g, templates: (g.templates ?? []).filter((t) => t.id !== templateId) } : g)
+        );
+        return;
+      }
+      const group = allGroups.find((g) => g.id === groupId);
+      if (!group) return;
+      await updateDoc(doc(db, "groups", groupId), { templates: (group.templates ?? []).filter((t) => t.id !== templateId) });
+    },
+    [allGroups, isGuest, updateGuestGroups]
+  );
+
+  const updateGroupName = useCallback(
+    async (groupId: string, name: string) => {
+      if (isGuest) {
+        updateGuestGroups((prev) =>
+          prev.map((g) => (g.id === groupId ? { ...g, name } : g))
+        );
+        return;
+      }
+      await updateDoc(doc(db, "groups", groupId), { name });
+    },
+    [isGuest, updateGuestGroups]
+  );
+
   return (
     <GroupsContext.Provider
       value={{
@@ -484,6 +617,12 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         updateItemImage,
         updateItemNotes,
         clearPurchasedItems,
+        updateGroupName,
+        addItemsFromTemplate,
+        setItemsFromTemplate,
+        createGroupTemplate,
+        updateGroupTemplate,
+        deleteGroupTemplate,
       }}
     >
       {children}

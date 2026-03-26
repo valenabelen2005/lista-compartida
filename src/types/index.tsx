@@ -15,6 +15,33 @@ export interface ShoppingItemType {
   notes?: string;          // notas libres (opcional)
 }
 
+export interface TemplateItemType {
+  id: string;
+  name: string;
+  quantity: string;
+  price?: number;
+  priceMode?: "total" | "unit";
+  store?: string;
+  imageUrl?: string;
+}
+
+export interface TemplateType {
+  id: string;
+  name: string;
+  items: TemplateItemType[];
+  createdAt: number;
+}
+
+export interface FavoriteItemType {
+  id: string;
+  name: string;
+  quantity: string;
+  price?: number;
+  priceMode?: "total" | "unit";
+  store?: string;
+  imageUrl?: string;
+}
+
 export interface GroupType {
   id: string;
   name: string;
@@ -24,4 +51,5 @@ export interface GroupType {
   members: string[];
   memberNames?: Record<string, string>; // uid → displayName
   items: ShoppingItemType[];
+  templates?: TemplateType[];
 }
